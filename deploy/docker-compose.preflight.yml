@@ -1,0 +1,11 @@
+# Temporary overlay: exposes only /health on both public hostnames so the
+# certificates and the Traefik routing can be verified before the platform is
+# opened to real traffic. Never used once the stack is live.
+services:
+  api:
+    labels:
+      traefik.http.routers.cle-api.rule: (Host(`${API_HOST}`) || Host(`${MINIAPP_HOST}`)) && Path(`/health`)
+  worker:
+    profiles: [disabled]
+  miniapp:
+    profiles: [disabled]

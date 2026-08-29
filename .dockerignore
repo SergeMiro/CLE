@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+.git
+.turbo
+**/.turbo
+**/.next
+**/dist
+coverage
+test-results
+playwright-report
+.playwright-mcp
+.cle
+.env
+.env.*
+!.env.example
+*.log

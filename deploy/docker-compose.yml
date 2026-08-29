@@ -1,9 +1,16 @@
 # CLE behind the Traefik instance already running on this host.
 #
+# The project name is pinned to cle-prod. Compose otherwise derives it from the
+# directory, which collides twice on this host: with another "deploy" directory,
+# and with the development stack in the repository root (project "cle"). Sharing
+# a namespace means `down --remove-orphans` deletes the other stack's containers.
+#
 #   docker compose -f deploy/docker-compose.yml --env-file .env.production up -d --build
 #
 # Requires: an external network named infra_web (Traefik's), and DNS for
 # cle.smiro.dev / cle-api.smiro.dev pointing at this host.
+
+name: cle-prod
 
 services:
   postgres:

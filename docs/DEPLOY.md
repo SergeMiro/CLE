@@ -38,6 +38,13 @@ pnpm --filter @cle/bot webhook:set https://cle-api.example.com/api/v1/telegram/w
 Migrations run as a one-shot `migrate` service that the API waits for, so a
 deploy can never start against an out-of-date schema.
 
+The stack pins its Compose project name to `cle-prod`. Without that, Compose
+derives the name from the directory, and two unrelated stacks that happen to sit
+in directories with the same name share a namespace — where
+`docker compose down --remove-orphans` in one deletes the other's containers.
+The development stack in the repository root stays under the project `cle`, with
+its own volumes and its own port bindings.
+
 ## Without a domain
 
 ```bash
