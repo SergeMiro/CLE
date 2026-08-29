@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts" },
-  "scripts": { "build": "tsc -p tsconfig.json", "lint": "tsc -p tsconfig.json --noEmit", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run" },
+  "scripts": { "build": "tsc -p tsconfig.build.json", "lint": "tsc -p tsconfig.json --noEmit", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run" },
   "dependencies": { "zod": "^4.3.6" },
   "devDependencies": { "vitest": "^4.1.0" }
 }
-
