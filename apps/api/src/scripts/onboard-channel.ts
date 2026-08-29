@@ -2,7 +2,7 @@ import { loadEnvironment } from '@cle/config';
 import { buildContext } from '../context.js';
 import { connectChannel } from '../services/channels.js';
 import { createCommunity, launchCommunity } from '../services/communities.js';
-import { upsertTelegramUser } from '../services/identity.js';
+import { ensureTelegramUser } from '../services/identity.js';
 import { createOrganization } from '../services/organizations.js';
 import { createQuizPolicyVersion } from '../services/policies.js';
 
@@ -24,7 +24,7 @@ const env = loadEnvironment();
 const ctx = buildContext({ env });
 
 async function main(): Promise<void> {
-  const owner = await upsertTelegramUser(ctx, { id: BigInt(ownerId!) });
+  const owner = await ensureTelegramUser(ctx, BigInt(ownerId!));
   const actor = { id: owner.id, isPlatformAdmin: owner.isPlatformAdmin };
   console.log(`owner: ${owner.id} (telegram ${owner.telegramId})`);
 

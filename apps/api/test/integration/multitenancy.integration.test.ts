@@ -306,6 +306,25 @@ describe('membership, referrals and fraud', () => {
     expect((signals[0]?.evidence as { distinctUsers: number }).distinctUsers).toBe(3);
   });
 
+  it('never blanks a known profile when only an id is available', async () => {
+    const session = await signIn(harness, 612_001, 'named_user');
+    const before = await harness.prisma.user.findUniqueOrThrow({ where: { telegramId: 612_001n } });
+    expect(before.telegramUsername).toBe('named_user');
+
+    const { ensureTelegramUser } = await import('../../src/services/identity.js');
+    const after = await ensureTelegramUser(harness.ctx, 612_001n);
+    expect(after.telegramUsername).toBe('named_user');
+    expect(after.id).toBe(before.id);
+    expect(session.token).toBeTruthy();
+  });
+
+  it('creates a user from a bare id when none exists', async () => {
+    const { ensureTelegramUser } = await import('../../src/services/identity.js');
+    const created = await ensureTelegramUser(harness.ctx, 612_002n);
+    expect(created.telegramId).toBe(612_002n);
+    expect(created.referralCode).toMatch(/^[A-HJ-NP-Z2-9]{10}$/);
+  });
+
   it('rejects an expired session', async () => {
     const session = await signIn(harness, 611_001, 'expiring');
     harness.setNow(new Date('2027-01-01T00:00:00Z'));

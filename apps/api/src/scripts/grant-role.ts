@@ -1,6 +1,6 @@
 import { loadEnvironment } from '@cle/config';
 import { buildContext } from '../context.js';
-import { upsertTelegramUser } from '../services/identity.js';
+import { ensureTelegramUser } from '../services/identity.js';
 import { recordAudit } from '../services/audit.js';
 
 /**
@@ -27,7 +27,7 @@ if (!organization) {
   process.exit(1);
 }
 
-const user = await upsertTelegramUser(ctx, { id: BigInt(telegramId) });
+const user = await ensureTelegramUser(ctx, BigInt(telegramId));
 const role = roleArg as Role;
 await ctx.prisma.organizationMember.upsert({
   where: { organizationId_userId: { organizationId: organization.id, userId: user.id } },

@@ -161,3 +161,13 @@ describe('quiz announcement', () => {
     expect(announcementFor('en').questions(3)).toContain('3 questions');
   });
 });
+
+describe('ensureTelegramUser', () => {
+  it('is exported for callers that hold only an id', async () => {
+    // The behaviour itself is covered by the integration suite against a real
+    // database; this guards the seam operator scripts depend on.
+    const identity = await import('../src/services/identity.js');
+    expect(typeof identity.ensureTelegramUser).toBe('function');
+    expect(typeof identity.upsertTelegramUser).toBe('function');
+  });
+});

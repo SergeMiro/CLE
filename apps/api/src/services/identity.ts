@@ -84,6 +84,11 @@ export function verifyIdentity(ctx: AppContext, initData: string): TelegramIdent
   }
 }
 
+/**
+ * Records the identity Telegram signed. The profile is written verbatim,
+ * including cleared fields: signed initData is the current truth about a person,
+ * so a username they have removed must disappear here too.
+ */
 export async function upsertTelegramUser(ctx: AppContext, identity: TelegramIdentity): Promise<User> {
   const isPlatformAdmin = ctx.platformAdminTelegramIds.some((id) => id === identity.id);
   const shared = {
@@ -98,4 +103,20 @@ export async function upsertTelegramUser(ctx: AppContext, identity: TelegramIden
     update: isPlatformAdmin ? { ...shared, isPlatformAdmin: true } : shared,
     create: { telegramId: identity.id, referralCode: newReferralCode(), isPlatformAdmin, ...shared },
   });
+}
+
+/**
+ * Finds or creates a user from a bare Telegram id, for callers that have no
+ * profile to write — operator scripts and Telegram updates that carry only an
+ * id. It must never blank out a profile that a real sign-in already recorded.
+ */
+export async function ensureTelegramUser(ctx: AppContext, telegramId: bigint): Promise<User> {
+  const isPlatformAdmin = ctx.platformAdminTelegramIds.some((id) => id === telegramId);
+  const existing = await ctx.prisma.user.findUnique({ where: { telegramId } });
+  if (existing) {
+    return isPlatformAdmin && !existing.isPlatformAdmin
+      ? ctx.prisma.user.update({ where: { id: existing.id }, data: { isPlatformAdmin: true } })
+      : existing;
+  }
+  return ctx.prisma.user.create({ data: { telegramId, referralCode: newReferralCode(), isPlatformAdmin } });
 }
