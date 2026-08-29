@@ -1,22 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { applyMembershipObservation, completeRejoinCooldown } from '../src/index.js';
+import { applyMembershipObservation, completeRejoinCooldown, type MembershipState } from '../src/index.js';
 
-const joined = new Date('2026-08-01T00:00:00Z');
+const at = new Date('2026-08-29T12:00:00Z');
+const later = new Date('2026-09-05T12:00:00Z');
+
 describe('membership state machine', () => {
-  it('records an initial join without losing firstJoinAt', () => {
-    const first = applyMembershipObservation({ status: 'UNKNOWN', rejoinCount: 0 }, true, joined);
-    expect(first.event).toBe('JOIN');
-    expect(first.next.firstJoinAt).toEqual(joined);
+  it('records a first join', () => {
+    const { next, event } = applyMembershipObservation({ status: 'UNKNOWN', rejoinCount: 0 }, true, at);
+    expect(event).toBe('JOIN');
+    expect(next).toMatchObject({ status: 'ACTIVE', firstJoinAt: at, currentJoinAt: at });
   });
-  it('makes a leaving member rejoin once and require cooldown', () => {
-    const active = { status: 'ACTIVE' as const, rejoinCount: 0, firstJoinAt: joined, currentJoinAt: joined };
-    const left = applyMembershipObservation(active, false, new Date('2026-08-02'));
-    const rejoined = applyMembershipObservation(left.next, true, new Date('2026-08-03'));
-    expect(rejoined).toMatchObject({ event: 'REJOIN', next: { status: 'REJOIN_COOLDOWN', rejoinCount: 1, firstJoinAt: joined } });
-    expect(completeRejoinCooldown(rejoined.next).status).toBe('ACTIVE');
+
+  it('records a leave', () => {
+    const state: MembershipState = { status: 'ACTIVE', rejoinCount: 0, firstJoinAt: at, currentJoinAt: at };
+    const { next, event } = applyMembershipObservation(state, false, later);
+    expect(event).toBe('LEAVE');
+    expect(next).toMatchObject({ status: 'LEFT', lastLeaveAt: later });
   });
-  it('does not overwrite an existing active member with duplicate checks', () => {
-    const state = { status: 'ACTIVE' as const, rejoinCount: 0, firstJoinAt: joined, currentJoinAt: joined };
-    expect(applyMembershipObservation(state, true, new Date('2026-08-02'))).toEqual({ next: state });
+
+  it('puts a rejoin into cooldown and counts it', () => {
+    const state: MembershipState = { status: 'LEFT', rejoinCount: 0, firstJoinAt: at, lastLeaveAt: at };
+    const { next, event } = applyMembershipObservation(state, true, later);
+    expect(event).toBe('REJOIN');
+    expect(next).toMatchObject({ status: 'REJOIN_COOLDOWN', rejoinCount: 1, currentJoinAt: later });
+  });
+
+  it('is idempotent for repeated identical observations', () => {
+    const state: MembershipState = { status: 'ACTIVE', rejoinCount: 0, currentJoinAt: at };
+    const { next, event } = applyMembershipObservation(state, true, later);
+    expect(event).toBeUndefined();
+    expect(next).toBe(state);
+  });
+
+  it('never resurrects a banned member', () => {
+    const state: MembershipState = { status: 'BANNED', rejoinCount: 0 };
+    expect(applyMembershipObservation(state, true, later).next.status).toBe('BANNED');
+  });
+
+  it('completes a cooldown into active membership', () => {
+    expect(completeRejoinCooldown({ status: 'REJOIN_COOLDOWN', rejoinCount: 1 }).status).toBe('ACTIVE');
+    expect(completeRejoinCooldown({ status: 'LEFT', rejoinCount: 1 }).status).toBe('LEFT');
   });
 });

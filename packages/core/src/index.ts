@@ -1,3 +1,3 @@
 export * from './money.js';
-export * from './rewards.js';
-
+export * from './policy.js';
+export * from './quiz.js';

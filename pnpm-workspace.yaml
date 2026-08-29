@@ -6,4 +6,6 @@ allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
   esbuild: true
+  # Optional native accelerator for BullMQ's msgpackr; the pure-JS path is fine.
+  msgpackr-extract: false
   prisma: true

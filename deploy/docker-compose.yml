@@ -1,0 +1,104 @@
+# CLE behind the Traefik instance already running on this host.
+#
+#   docker compose -f deploy/docker-compose.yml --env-file .env.production up -d --build
+#
+# Requires: an external network named infra_web (Traefik's), and DNS for
+# cle.smiro.dev / cle-api.smiro.dev pointing at this host.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cle}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-cle}
+    volumes: [cle-postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cle} -d ${POSTGRES_DB:-cle}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [cle]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1"]
+    volumes: [cle-redis:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [cle]
+
+  migrate:
+    build:
+      context: ..
+      target: runtime
+    command: ["pnpm", "--filter", "@cle/db", "exec", "prisma", "migrate", "deploy"]
+    env_file: [../.env.production]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+    networks: [cle]
+
+  api:
+    build:
+      context: ..
+      target: runtime
+    command: ["pnpm", "--filter", "@cle/api", "exec", "tsx", "src/main.ts"]
+    env_file: [../.env.production]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: infra_web
+      traefik.http.routers.cle-api.rule: Host(`${API_HOST:?set API_HOST}`)
+      traefik.http.routers.cle-api.entrypoints: websecure
+      traefik.http.routers.cle-api.tls.certresolver: myresolver
+      traefik.http.services.cle-api.loadbalancer.server.port: "4101"
+    networks: [cle, web]
+
+  worker:
+    build:
+      context: ..
+      target: runtime
+    command: ["pnpm", "--filter", "@cle/worker", "exec", "tsx", "src/main.ts"]
+    env_file: [../.env.production]
+    depends_on:
+      api: { condition: service_started }
+    restart: unless-stopped
+    networks: [cle]
+
+  miniapp:
+    build:
+      context: ..
+      target: runtime
+      args:
+        API_URL: https://${API_HOST:?set API_HOST}
+    command: ["pnpm", "--filter", "@cle/miniapp", "exec", "next", "start", "--port", "4100"]
+    env_file: [../.env.production]
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: infra_web
+      traefik.http.routers.cle-miniapp.rule: Host(`${MINIAPP_HOST:?set MINIAPP_HOST}`)
+      traefik.http.routers.cle-miniapp.entrypoints: websecure
+      traefik.http.routers.cle-miniapp.tls.certresolver: myresolver
+      traefik.http.services.cle-miniapp.loadbalancer.server.port: "4100"
+    networks: [cle, web]
+
+volumes:
+  cle-postgres:
+  cle-redis:
+
+networks:
+  cle:
+  web:
+    external: true
+    name: infra_web

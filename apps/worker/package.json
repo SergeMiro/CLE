@@ -1,0 +1,31 @@
+{
+  "name": "@cle/worker",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "once": "tsx src/once.ts",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests --exclude 'test/integration/**'",
+    "test:integration": "vitest run test/integration"
+  },
+  "dependencies": {
+    "@cle/ai": "workspace:*",
+    "@cle/api": "workspace:*",
+    "@cle/config": "workspace:*",
+    "@cle/core": "workspace:*",
+    "@cle/db": "workspace:*",
+    "@cle/telegram": "workspace:*",
+    "@cle/ton": "workspace:*",
+    "bullmq": "^5.63.0",
+    "ioredis": "^5.9.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "vitest": "^4.1.0"
+  }
+}

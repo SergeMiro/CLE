@@ -1,3 +1,7 @@
+// CLE — Create, Learn & Earn.
+// Multi-tenant platform: Platform > Organization > TelegramChannel > Community > Members.
+// Money is always BigInt nanoton. Shares are integer basis points (10000 bps = 100%).
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,6 +11,63 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserStatus {
+  ACTIVE
+  RESTRICTED
+  BANNED
+}
+
+enum WalletOwnerType {
+  USER
+  ORGANIZATION
+  PLATFORM
+}
+
+enum TonNetwork {
+  MAINNET
+  TESTNET
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  EDITOR
+  ANALYST
+  FINANCE
+}
+
+enum ChannelStatus {
+  PENDING
+  VERIFYING
+  ACTIVE
+  DEGRADED
+  DISCONNECTED
+  SUSPENDED
+}
+
+enum MonetizationStatus {
+  DISABLED
+  ENABLED
+  PAUSED
+}
+
+enum CommunityStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
 enum MembershipStatus {
   UNKNOWN
   ACTIVE
@@ -14,12 +75,14 @@ enum MembershipStatus {
   BANNED
   REJOIN_COOLDOWN
 }
+
 enum RewardEligibilityStatus {
   PENDING
   ELIGIBLE
   SUSPENDED
   BLOCKED
 }
+
 enum MembershipEventType {
   JOIN
   LEAVE
@@ -27,6 +90,7 @@ enum MembershipEventType {
   BAN
   UNBAN
 }
+
 enum MembershipEventSource {
   WEBHOOK
   ONBOARDING_CHECK
@@ -34,13 +98,61 @@ enum MembershipEventSource {
   WITHDRAWAL_CHECK
   ADMIN
 }
+
+enum ContentStatus {
+  RECEIVED
+  NORMALIZED
+  QUIZ_REQUESTED
+  QUIZ_READY
+  SKIPPED
+  FAILED
+}
+
+enum QuizMode {
+  MANUAL
+  AUTO
+}
+
+enum QuizStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  PUBLISHED
+  CLOSED
+  REJECTED
+}
+
+enum QuizDifficulty {
+  EASY
+  NORMAL
+  HARD
+  CHALLENGE
+}
+
+enum QuizAttemptStatus {
+  STARTED
+  SUBMITTED
+  EXPIRED
+  FLAGGED
+}
+
 enum RevenueStatus {
   OBSERVED
   PENDING
   CONFIRMED
   FUNDED
+  DISTRIBUTED
   CANCELLED
 }
+
+enum RevenueCycleStatus {
+  DRAFT
+  FUNDED
+  SPLIT
+  CLOSED
+  CANCELLED
+}
+
 enum RewardCycleStatus {
   DRAFT
   CALCULATING
@@ -49,21 +161,49 @@ enum RewardCycleStatus {
   FINALIZED
   CANCELLED
 }
+
+enum RewardPoolType {
+  GROWTH
+  LOYALTY
+  REFERRAL
+  LEARNING
+}
+
 enum RewardAllocationType {
   GROWTH
   LOYALTY
   REFERRAL
-  SCIENCE
+  LEARNING
   ADJUSTMENT
 }
+
 enum RewardAllocationStatus {
   PENDING
   AVAILABLE
-  LOCKED
   CANCELLED
   PAID
 }
-enum LedgerEntryType {
+
+enum LedgerAccountType {
+  PLATFORM_TREASURY
+  ORGANIZATION_TREASURY
+  COMMUNITY_TREASURY
+  CREATOR_BALANCE
+  USER_AVAILABLE
+  USER_PENDING
+  USER_LOCKED
+  REVENUE_SOURCE
+  EXTERNAL_TON
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
+enum LedgerTransactionKind {
+  REVENUE_FUNDED
+  REVENUE_SPLIT
   REWARD_PENDING
   REWARD_UNLOCK
   REWARD_CANCEL
@@ -72,6 +212,12 @@ enum LedgerEntryType {
   WITHDRAWAL_RELEASE
   ADMIN_ADJUSTMENT
 }
+
+enum WithdrawalSubjectType {
+  USER
+  ORGANIZATION
+}
+
 enum WithdrawalStatus {
   REQUESTED
   LOCKED
@@ -81,354 +227,871 @@ enum WithdrawalStatus {
   FAILED
   CANCELLED
 }
+
+enum ReferralScope {
+  PLATFORM
+  COMMUNITY
+}
+
 enum ReferralStatus {
   PENDING
   QUALIFIED
   REWARDED
   REJECTED
 }
-enum QuizStatus {
-  DRAFT
-  REVIEW
-  APPROVED
-  PUBLISHED
-  CLOSED
-}
-enum QuizDifficulty {
-  EASY
-  NORMAL
-  HARD
-  CHALLENGE
-}
-enum QuizAttemptStatus {
-  STARTED
-  SUBMITTED
-  EXPIRED
-  FLAGGED
-}
+
 enum FraudCaseStatus {
   OPEN
   REVIEW
   CLEARED
   BLOCKED
 }
-enum TonNetwork {
-  MAINNET
-  TESTNET
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
 }
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
 
 model User {
-  id                      String                  @id @default(uuid()) @db.Uuid
-  telegramId              BigInt                  @unique
-  telegramUsername        String?
-  telegramFirstName       String?
-  telegramLastName        String?
-  firstSeenAt             DateTime                @default(now())
-  lastSeenAt              DateTime                @default(now())
-  firstJoinAt             DateTime?
-  currentJoinAt           DateTime?
-  lastLeaveAt             DateTime?
-  membershipStatus        MembershipStatus        @default(UNKNOWN)
-  rejoinCount             Int                     @default(0)
-  referralCode            String                  @unique
-  referredByUserId        String?                 @db.Uuid
-  rewardEligibilityStatus RewardEligibilityStatus @default(PENDING)
-  fraudScore              Int                     @default(0)
-  fraudStatus             FraudCaseStatus?
-  createdAt               DateTime                @default(now())
-  updatedAt               DateTime                @updatedAt
-  referredBy              User?                   @relation("ReferredBy", fields: [referredByUserId], references: [id])
-  referrals               User[]                  @relation("ReferredBy")
-  memberships             MembershipEvent[]
-  wallets                 Wallet[]
-  allocations             RewardAllocation[]
-  ledgerEntries           LedgerEntry[]
-  withdrawals             Withdrawal[]
-  quizAttempts            QuizAttempt[]
-  referralsSent           Referral[]              @relation("Referrer")
-  referralReceived        Referral?               @relation("Referred")
-  fraudSignals            FraudSignal[]
-  eligibilitySnapshots    RewardEligibilitySnapshot[]
-  @@index([membershipStatus])
-  @@index([firstJoinAt])
+  id                String     @id @default(uuid()) @db.Uuid
+  telegramId        BigInt     @unique
+  telegramUsername  String?
+  telegramFirstName String?
+  telegramLastName  String?
+  languageCode      String?
+  isPlatformAdmin   Boolean    @default(false)
+  status            UserStatus @default(ACTIVE)
+  referralCode      String     @unique
+  referredByUserId  String?    @db.Uuid
+  learningPoints    Int        @default(0)
+  fraudScore        Int        @default(0)
+  firstSeenAt       DateTime   @default(now())
+  lastSeenAt        DateTime   @default(now())
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  referredBy           User?                       @relation("PlatformReferral", fields: [referredByUserId], references: [id], onDelete: Restrict)
+  referredUsers        User[]                      @relation("PlatformReferral")
+  sessions             Session[]
+  wallets              Wallet[]
+  ownedOrganizations   Organization[]              @relation("OrganizationOwner")
+  organizationMembers  OrganizationMember[]
+  communityMembers     CommunityMember[]
+  quizAttempts         QuizAttempt[]
+  eligibilitySnapshots RewardEligibilitySnapshot[]
+  allocations          RewardAllocation[]
+  withdrawals          Withdrawal[]
+  referralsSent        Referral[]                  @relation("ReferralReferrer")
+  referralsReceived    Referral[]                  @relation("ReferralReferred")
+  fraudSignals         FraudSignal[]
+  fraudCases           FraudCase[]
+  notifications        Notification[]
+  botInstallations     TelegramBotInstallation[]
+
+  @@index([status])
+  @@index([referredByUserId])
 }
 
-model MembershipEvent {
-  id String @id @default(uuid()) @db.Uuid
-  userId String @db.Uuid
-  type MembershipEventType
-  telegramStatus String?
-  occurredAt DateTime
-  source MembershipEventSource
-  createdAt DateTime @default(now())
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-  @@index([userId, occurredAt])
+model Session {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  issuedAt  DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipHash    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model Wallet {
-  id String @id @default(uuid()) @db.Uuid
-  userId String @db.Uuid
-  addressRaw String @unique
+  id              String          @id @default(uuid()) @db.Uuid
+  ownerType       WalletOwnerType
+  userId          String?         @db.Uuid
+  organizationId  String?         @db.Uuid
+  addressRaw      String
   addressFriendly String
-  network TonNetwork
-  verifiedAt DateTime?
-  isPrimary Boolean @default(false)
-  createdAt DateTime @default(now())
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-  withdrawals Withdrawal[]
+  network         TonNetwork
+  isPrimary       Boolean         @default(false)
+  verifiedAt      DateTime?
+  createdAt       DateTime        @default(now())
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  withdrawals  Withdrawal[]
+
+  @@unique([addressRaw, network, ownerType, userId, organizationId], name: "wallet_owner_address")
+  @@index([userId])
+  @@index([organizationId])
+  @@index([addressRaw])
+}
+
+// ---------------------------------------------------------------------------
+// Tenant: organizations
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id          String             @id @default(uuid()) @db.Uuid
+  slug        String             @unique
+  name        String
+  ownerUserId String             @db.Uuid
+  status      OrganizationStatus @default(ACTIVE)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  owner        User                 @relation("OrganizationOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  members      OrganizationMember[]
+  channels     TelegramChannel[]
+  communities  Community[]
+  wallets      Wallet[]
+  revenue      RevenueEntry[]
+  withdrawals  Withdrawal[]
+  aiUsage      AIUsage[]
+
+  @@index([ownerUserId])
+}
+
+model OrganizationMember {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  role           OrganizationRole
+  invitedByUserId String?         @db.Uuid
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
   @@index([userId])
 }
 
-model RevenueEntry {
-  id String @id @default(uuid()) @db.Uuid
-  source String
-  amountNanoton BigInt
-  periodStart DateTime
-  periodEnd DateTime
-  status RevenueStatus
-  externalReference String? @unique
-  metadata Json?
-  createdAt DateTime @default(now())
-  confirmedAt DateTime?
-  @@index([status, periodStart])
+// ---------------------------------------------------------------------------
+// Telegram
+// ---------------------------------------------------------------------------
+
+model TelegramChannel {
+  id                 String             @id @default(uuid()) @db.Uuid
+  organizationId     String             @db.Uuid
+  telegramChatId     BigInt             @unique
+  username           String?
+  title              String
+  description        String?
+  status             ChannelStatus      @default(PENDING)
+  monetizationStatus MonetizationStatus @default(DISABLED)
+  botIsAdmin         Boolean            @default(false)
+  permissions        Json?
+  missingPermissions String[]
+  memberCount        Int?
+  verifiedAt         DateTime?
+  lastCheckedAt      DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  organization  Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  community     Community?
+  installations TelegramBotInstallation[]
+  contentItems  ContentItem[]
+  revenue       RevenueEntry[]
+
+  @@index([organizationId, status])
 }
 
-model RewardCycle {
-  id String @id @default(uuid()) @db.Uuid
-  periodStart DateTime
-  periodEnd DateTime
-  grossRevenueNanoton BigInt
-  creatorShareNanoton BigInt
-  communityShareNanoton BigInt
-  growthPoolNanoton BigInt
-  loyaltyPoolNanoton BigInt
-  referralPoolNanoton BigInt
-  sciencePoolNanoton BigInt
-  configurationSnapshot Json
-  status RewardCycleStatus @default(DRAFT)
-  calculatedAt DateTime?
-  approvedAt DateTime?
-  finalizedAt DateTime?
-  createdAt DateTime @default(now())
-  allocations RewardAllocation[]
-  snapshots RewardEligibilitySnapshot[]
-  @@index([status, periodStart])
+model TelegramBotInstallation {
+  id            String    @id @default(uuid()) @db.Uuid
+  channelId     String    @db.Uuid
+  botId         BigInt
+  addedByUserId String?   @db.Uuid
+  permissions   Json
+  installedAt   DateTime  @default(now())
+  removedAt     DateTime?
+
+  channel TelegramChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  addedBy User?           @relation(fields: [addedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([channelId, installedAt])
 }
 
-model RewardEligibilitySnapshot {
-  id String @id @default(uuid()) @db.Uuid
-  cycleId String @db.Uuid
-  userId String @db.Uuid
-  membershipAgeDays Int
-  membershipStatus MembershipStatus
-  rejoinCount Int
-  growthEligible Boolean
-  loyaltyEligible Boolean
-  referralUnits Int
-  sciencePoints Int
-  loyaltyWeightBps Int
-  createdAt DateTime @default(now())
-  cycle RewardCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-  @@unique([cycleId, userId])
+model WebhookEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  provider    String
+  externalId  String
+  payload     Json
+  receivedAt  DateTime @default(now())
+  processedAt DateTime?
+  error       String?
+
+  @@unique([provider, externalId])
+  @@index([receivedAt])
 }
 
-model RewardAllocation {
-  id String @id @default(uuid()) @db.Uuid
-  cycleId String @db.Uuid
-  userId String @db.Uuid
-  type RewardAllocationType
-  amountNanoton BigInt
-  weight BigInt?
-  sourceUnits BigInt?
-  idempotencyKey String @unique
-  status RewardAllocationStatus
-  eligibleAt DateTime?
-  availableAt DateTime?
-  cancelledAt DateTime?
-  paidAt DateTime?
-  createdAt DateTime @default(now())
-  cycle RewardCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-  ledgerEntries LedgerEntry[]
-  @@unique([cycleId, userId, type])
-  @@index([userId, status])
+// ---------------------------------------------------------------------------
+// Community
+// ---------------------------------------------------------------------------
+
+model Community {
+  id             String          @id @default(uuid()) @db.Uuid
+  organizationId String          @db.Uuid
+  channelId      String          @unique @db.Uuid
+  slug           String          @unique
+  name           String
+  description    String?
+  status         CommunityStatus @default(DRAFT)
+  language       String          @default("en")
+  memberCount    Int             @default(0)
+  createdAt      DateTime        @default(now())
+  launchedAt     DateTime?
+  updatedAt      DateTime        @updatedAt
+
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  channel         TelegramChannel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  members         CommunityMember[]
+  levels          CommunityLevel[]
+  revenuePolicies RevenuePolicy[]
+  rewardPolicies  RewardPolicy[]
+  quizPolicies    QuizGenerationPolicy[]
+  contentItems    ContentItem[]
+  quizzes         Quiz[]
+  revenueEntries  RevenueEntry[]
+  revenueCycles   RevenueCycle[]
+  rewardCycles    RewardCycle[]
+  allocations     RewardAllocation[]
+  referrals       Referral[]
+  aiUsage         AIUsage[]
+
+  @@index([organizationId, status])
 }
 
-model LedgerEntry {
-  id String @id @default(uuid()) @db.Uuid
-  userId String @db.Uuid
-  type LedgerEntryType
-  amountNanoton BigInt
-  rewardAllocationId String? @db.Uuid
-  withdrawalId String? @db.Uuid
-  reference String @unique
-  createdAt DateTime @default(now())
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-  rewardAllocation RewardAllocation? @relation(fields: [rewardAllocationId], references: [id], onDelete: Restrict)
-  withdrawal Withdrawal? @relation(fields: [withdrawalId], references: [id], onDelete: Restrict)
-  @@index([userId, createdAt])
+model CommunityLevel {
+  id          String @id @default(uuid()) @db.Uuid
+  communityId String @db.Uuid
+  key         String
+  name        String
+  minDays     Int    @default(0)
+  minPoints   Int    @default(0)
+  weightBps   Int    @default(10000)
+  sortOrder   Int
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, key])
+  @@unique([communityId, sortOrder])
 }
 
-model Withdrawal {
-  id String @id @default(uuid()) @db.Uuid
-  userId String @db.Uuid
-  walletId String @db.Uuid
-  amountNanoton BigInt
-  idempotencyKey String @unique
-  status WithdrawalStatus @default(REQUESTED)
-  txHash String? @unique
-  failureReason String?
-  requestedAt DateTime @default(now())
-  processingAt DateTime?
-  completedAt DateTime?
-  failedAt DateTime?
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
-  ledgerEntries LedgerEntry[]
-  @@index([userId, status])
+model CommunityMember {
+  id               String                  @id @default(uuid()) @db.Uuid
+  communityId      String                  @db.Uuid
+  userId           String                  @db.Uuid
+  status           MembershipStatus        @default(UNKNOWN)
+  eligibility      RewardEligibilityStatus @default(PENDING)
+  firstJoinAt      DateTime?
+  currentJoinAt    DateTime?
+  leaveAt          DateTime?
+  rejoinCount      Int                     @default(0)
+  loyaltyLevelKey  String?
+  learningPoints   Int                     @default(0)
+  quizzesCompleted Int                     @default(0)
+  lastQuizAt       DateTime?
+  referredByUserId String?                 @db.Uuid
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  community Community         @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events    MembershipEvent[]
+
+  @@unique([communityId, userId])
+  @@index([communityId, status])
+  @@index([userId])
+}
+
+model MembershipEvent {
+  id             String                @id @default(uuid()) @db.Uuid
+  memberId       String                @db.Uuid
+  type           MembershipEventType
+  telegramStatus String?
+  occurredAt     DateTime
+  source         MembershipEventSource
+  createdAt      DateTime              @default(now())
+
+  member CommunityMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, occurredAt])
+}
+
+// ---------------------------------------------------------------------------
+// Versioned policies
+// ---------------------------------------------------------------------------
+
+model PlatformPolicy {
+  id                     String   @id @default(uuid()) @db.Uuid
+  version                Int      @unique
+  platformFeeBps         Int
+  maxCreatorShareBps     Int
+  minWithdrawalNanoton   BigInt
+  maxQuizzesPerDay       Int
+  allowedPoolTypes       String[]
+  minPoolBps             Int      @default(0)
+  maxPoolBps             Int      @default(10000)
+  settings               Json?
+  effectiveAt            DateTime
+  createdAt              DateTime @default(now())
+
+  @@index([effectiveAt])
+}
+
+model RevenuePolicy {
+  id              String   @id @default(uuid()) @db.Uuid
+  communityId     String   @db.Uuid
+  version         Int
+  creatorShareBps Int
+  effectiveFrom   DateTime @default(now())
+  createdByUserId String?  @db.Uuid
+  createdAt       DateTime @default(now())
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, version])
+  @@index([communityId, effectiveFrom])
+}
+
+model RewardPolicy {
+  id                        String   @id @default(uuid()) @db.Uuid
+  communityId               String   @db.Uuid
+  version                   Int
+  growthBps                 Int
+  loyaltyBps                Int
+  referralBps               Int
+  learningBps               Int
+  newMemberHoldDays         Int      @default(7)
+  rejoinCooldownDays        Int      @default(7)
+  referralQualificationDays Int      @default(30)
+  loyaltyTiers              Json
+  learningMultipliers       Json
+  minRewardNanoton          BigInt   @default(0)
+  effectiveFrom             DateTime @default(now())
+  createdByUserId           String?  @db.Uuid
+  createdAt                 DateTime @default(now())
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, version])
+  @@index([communityId, effectiveFrom])
+}
+
+model QuizGenerationPolicy {
+  id                String         @id @default(uuid()) @db.Uuid
+  communityId       String         @db.Uuid
+  version           Int
+  enabled           Boolean        @default(false)
+  mode              QuizMode       @default(MANUAL)
+  questionsPerQuiz  Int            @default(3)
+  difficulty        QuizDifficulty @default(NORMAL)
+  language          String         @default("en")
+  quizDelayMinutes  Int            @default(0)
+  dailyQuizLimit    Int            @default(3)
+  categoriesAllowed String[]
+  minimumPostLength Int            @default(200)
+  publishButtonText String         @default("START QUIZ")
+  rewardEnabled     Boolean        @default(true)
+  qualityThreshold  Int            @default(70)
+  pointsPerQuestion Int            @default(10)
+  effectiveFrom     DateTime       @default(now())
+  createdAt         DateTime       @default(now())
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, version])
+}
+
+// ---------------------------------------------------------------------------
+// Content and quizzes
+// ---------------------------------------------------------------------------
+
+model ContentItem {
+  id                String        @id @default(uuid()) @db.Uuid
+  communityId       String        @db.Uuid
+  channelId         String        @db.Uuid
+  telegramMessageId BigInt
+  telegramMessageUrl String?
+  text              String
+  mediaMetadata     Json?
+  language          String?
+  category          String?
+  topics            String[]
+  status            ContentStatus @default(RECEIVED)
+  skipReason        String?
+  publishedAt       DateTime
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  community Community       @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  channel   TelegramChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  quizzes   Quiz[]
+
+  @@unique([channelId, telegramMessageId])
+  @@index([communityId, publishedAt])
   @@index([status])
 }
 
-model Referral {
-  id String @id @default(uuid()) @db.Uuid
-  referrerUserId String @db.Uuid
-  referredUserId String @unique @db.Uuid
-  status ReferralStatus @default(PENDING)
-  createdAt DateTime @default(now())
-  qualifiedAt DateTime?
-  rewardedAt DateTime?
-  referrer User @relation("Referrer", fields: [referrerUserId], references: [id], onDelete: Restrict)
-  referred User @relation("Referred", fields: [referredUserId], references: [id], onDelete: Restrict)
-  @@index([referrerUserId, status])
-}
-
-model Article {
-  id String @id @default(uuid()) @db.Uuid
-  telegramMessageId BigInt?
-  telegramPostUrl String?
-  title String
-  summary String
-  referenceContent String
-  publishedAt DateTime?
-  createdAt DateTime @default(now())
-  quiz Quiz?
-}
-
 model Quiz {
-  id String @id @default(uuid()) @db.Uuid
-  postId String @unique @db.Uuid
-  title String
-  status QuizStatus @default(DRAFT)
-  availableFrom DateTime?
-  availableUntil DateTime?
-  maxAttempts Int @default(1)
-  createdAt DateTime @default(now())
-  approvedAt DateTime?
-  publishedAt DateTime?
-  post Article @relation(fields: [postId], references: [id], onDelete: Restrict)
-  questions QuizQuestion[]
-  attempts QuizAttempt[]
+  id                String         @id @default(uuid()) @db.Uuid
+  communityId       String         @db.Uuid
+  contentItemId     String?        @db.Uuid
+  title             String
+  status            QuizStatus     @default(DRAFT)
+  difficulty        QuizDifficulty @default(NORMAL)
+  language          String         @default("en")
+  totalPoints       Int            @default(0)
+  maxAttempts       Int            @default(1)
+  qualityScore      Int?
+  generationMeta    Json?
+  publishedMessageId BigInt?
+  availableFrom     DateTime?
+  availableUntil    DateTime?
+  createdAt         DateTime       @default(now())
+  approvedAt        DateTime?
+  publishedAt       DateTime?
+  closedAt          DateTime?
+
+  community   Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  contentItem ContentItem?   @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+  questions   QuizQuestion[]
+  attempts    QuizAttempt[]
+
+  @@index([communityId, status])
   @@index([status, availableFrom])
 }
 
 model QuizQuestion {
-  id String @id @default(uuid()) @db.Uuid
-  quizId String @db.Uuid
-  question String
-  difficulty QuizDifficulty
-  basePoints Int
-  sortOrder Int
-  createdAt DateTime @default(now())
-  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  id         String         @id @default(uuid()) @db.Uuid
+  quizId     String         @db.Uuid
+  prompt     String
+  difficulty QuizDifficulty @default(NORMAL)
+  basePoints Int            @default(10)
+  sortOrder  Int
+  createdAt  DateTime       @default(now())
+
+  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
   options QuizOption[]
   answers QuizAnswer[]
+
   @@unique([quizId, sortOrder])
 }
 
 model QuizOption {
-  id String @id @default(uuid()) @db.Uuid
-  questionId String @db.Uuid
-  text String
-  isCorrect Boolean
-  explanation String
-  sortOrder Int
+  id          String  @id @default(uuid()) @db.Uuid
+  questionId  String  @db.Uuid
+  text        String
+  isCorrect   Boolean
+  explanation String?
+  sortOrder   Int
+
   question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  answers QuizAnswer[]
+  answers  QuizAnswer[]
+
   @@unique([questionId, sortOrder])
 }
 
 model QuizAttempt {
-  id String @id @default(uuid()) @db.Uuid
-  quizId String @db.Uuid
-  userId String @db.Uuid
-  startedAt DateTime @default(now())
-  submittedAt DateTime?
-  rawPoints Int @default(0)
-  streakMultiplierBps Int @default(10000)
-  finalPoints Int @default(0)
-  status QuizAttemptStatus @default(STARTED)
-  idempotencyKey String @unique
-  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Restrict)
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  id             String            @id @default(uuid()) @db.Uuid
+  quizId         String            @db.Uuid
+  userId         String            @db.Uuid
+  communityId    String            @db.Uuid
+  status         QuizAttemptStatus @default(STARTED)
+  rawPoints      Int               @default(0)
+  finalPoints    Int               @default(0)
+  correctCount   Int               @default(0)
+  questionCount  Int               @default(0)
+  idempotencyKey String            @unique
+  startedAt      DateTime          @default(now())
+  submittedAt    DateTime?
+
+  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers QuizAnswer[]
+
   @@unique([quizId, userId])
-  @@index([userId, startedAt])
+  @@index([userId, submittedAt])
+  @@index([communityId, submittedAt])
 }
 
 model QuizAnswer {
-  id String @id @default(uuid()) @db.Uuid
-  attemptId String @db.Uuid
-  questionId String @db.Uuid
-  selectedOptionId String @db.Uuid
-  isCorrect Boolean
-  pointsAwarded Int
-  answeredAt DateTime @default(now())
-  attempt QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
-  selectedOption QuizOption @relation(fields: [selectedOptionId], references: [id], onDelete: Restrict)
+  id               String   @id @default(uuid()) @db.Uuid
+  attemptId        String   @db.Uuid
+  questionId       String   @db.Uuid
+  selectedOptionId String   @db.Uuid
+  isCorrect        Boolean
+  pointsAwarded    Int
+  answeredAt       DateTime @default(now())
+
+  attempt        QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption QuizOption   @relation(fields: [selectedOptionId], references: [id], onDelete: Cascade)
+
   @@unique([attemptId, questionId])
 }
 
+// ---------------------------------------------------------------------------
+// Revenue
+// ---------------------------------------------------------------------------
+
+model RevenueEntry {
+  id                String        @id @default(uuid()) @db.Uuid
+  organizationId    String        @db.Uuid
+  channelId         String?       @db.Uuid
+  communityId       String        @db.Uuid
+  revenueCycleId    String?       @db.Uuid
+  source            String
+  amountNanoton     BigInt
+  periodStart       DateTime
+  periodEnd         DateTime
+  status            RevenueStatus @default(OBSERVED)
+  externalReference String        @unique
+  metadata          Json?
+  createdAt         DateTime      @default(now())
+  confirmedAt       DateTime?
+  fundedAt          DateTime?
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  channel      TelegramChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  community    Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  revenueCycle RevenueCycle?    @relation(fields: [revenueCycleId], references: [id], onDelete: SetNull)
+
+  @@index([communityId, status])
+  @@index([status, periodStart])
+}
+
+model RevenueCycle {
+  id                    String             @id @default(uuid()) @db.Uuid
+  communityId           String             @db.Uuid
+  periodStart           DateTime
+  periodEnd             DateTime
+  grossNanoton          BigInt             @default(0)
+  platformFeeNanoton    BigInt             @default(0)
+  creatorShareNanoton   BigInt             @default(0)
+  communityShareNanoton BigInt             @default(0)
+  platformFeeBps        Int
+  creatorShareBps       Int
+  policySnapshot        Json
+  status                RevenueCycleStatus @default(DRAFT)
+  fundedAt              DateTime?
+  splitAt               DateTime?
+  closedAt              DateTime?
+  createdAt             DateTime           @default(now())
+
+  community   Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  entries     RevenueEntry[]
+  rewardCycle RewardCycle?
+
+  @@unique([communityId, periodStart, periodEnd])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Rewards
+// ---------------------------------------------------------------------------
+
+model RewardCycle {
+  id                 String            @id @default(uuid()) @db.Uuid
+  communityId        String            @db.Uuid
+  revenueCycleId     String            @unique @db.Uuid
+  periodStart        DateTime
+  periodEnd          DateTime
+  distributableNanoton BigInt
+  allocatedNanoton   BigInt            @default(0)
+  status             RewardCycleStatus @default(DRAFT)
+  policySnapshot     Json
+  calculatedAt       DateTime?
+  approvedAt         DateTime?
+  finalizedAt        DateTime?
+  createdAt          DateTime          @default(now())
+
+  community    Community                   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  revenueCycle RevenueCycle                @relation(fields: [revenueCycleId], references: [id], onDelete: Cascade)
+  pools        RewardPool[]
+  snapshots    RewardEligibilitySnapshot[]
+  allocations  RewardAllocation[]
+
+  @@index([communityId, status])
+}
+
+model RewardPool {
+  id                 String         @id @default(uuid()) @db.Uuid
+  cycleId            String         @db.Uuid
+  type               RewardPoolType
+  shareBps           Int
+  amountNanoton      BigInt
+  distributedNanoton BigInt         @default(0)
+  carriedNanoton     BigInt         @default(0)
+
+  cycle RewardCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, type])
+}
+
+model RewardEligibilitySnapshot {
+  id                String                  @id @default(uuid()) @db.Uuid
+  cycleId           String                  @db.Uuid
+  userId            String                  @db.Uuid
+  memberId          String                  @db.Uuid
+  membershipStatus  MembershipStatus
+  membershipAgeDays Int
+  rejoinCount       Int
+  growthEligible    Boolean
+  loyaltyEligible   Boolean
+  loyaltyWeightBps  Int
+  referralUnits     Int
+  learningPoints    Int
+  createdAt         DateTime                @default(now())
+
+  cycle RewardCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, userId])
+  @@index([cycleId])
+}
+
+model RewardAllocation {
+  id             String                 @id @default(uuid()) @db.Uuid
+  cycleId        String                 @db.Uuid
+  communityId    String                 @db.Uuid
+  userId         String                 @db.Uuid
+  type           RewardAllocationType
+  amountNanoton  BigInt
+  weight         BigInt                 @default(0)
+  sourceUnits    BigInt                 @default(0)
+  status         RewardAllocationStatus @default(PENDING)
+  idempotencyKey String                 @unique
+  availableAt    DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime               @default(now())
+
+  cycle     RewardCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  community Community   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, userId, type])
+  @@index([userId, status])
+  @@index([communityId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Ledger (append-only, double-entry)
+// ---------------------------------------------------------------------------
+
+model LedgerAccount {
+  id        String            @id @default(uuid()) @db.Uuid
+  type      LedgerAccountType
+  /// Organization, community or user id; the literal "platform" for the platform-wide accounts.
+  /// Not nullable: Postgres treats NULLs as distinct, which would let a singleton account be created twice.
+  ownerId   String            @default("platform")
+  label     String
+  createdAt DateTime          @default(now())
+
+  entries   LedgerEntry[]
+  snapshots BalanceSnapshot[]
+
+  @@unique([type, ownerId])
+}
+
+model LedgerTransaction {
+  id        String                @id @default(uuid()) @db.Uuid
+  kind      LedgerTransactionKind
+  reference String                @unique
+  metadata  Json?
+  createdAt DateTime              @default(now())
+
+  entries LedgerEntry[]
+
+  @@index([kind, createdAt])
+}
+
+model LedgerEntry {
+  id            String          @id @default(uuid()) @db.Uuid
+  transactionId String          @db.Uuid
+  accountId     String          @db.Uuid
+  direction     LedgerDirection
+  amountNanoton BigInt
+  createdAt     DateTime        @default(now())
+
+  transaction LedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  account     LedgerAccount     @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId, createdAt])
+  @@index([transactionId])
+}
+
+model BalanceSnapshot {
+  id            String   @id @default(uuid()) @db.Uuid
+  accountId     String   @db.Uuid
+  balanceNanoton BigInt
+  entryCount    Int
+  asOf          DateTime @default(now())
+
+  account LedgerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, asOf])
+}
+
+// ---------------------------------------------------------------------------
+// Withdrawals
+// ---------------------------------------------------------------------------
+
+model Withdrawal {
+  id             String                @id @default(uuid()) @db.Uuid
+  subjectType    WithdrawalSubjectType
+  userId         String?               @db.Uuid
+  organizationId String?               @db.Uuid
+  walletId       String                @db.Uuid
+  amountNanoton  BigInt
+  status         WithdrawalStatus      @default(REQUESTED)
+  idempotencyKey String                @unique
+  txHash         String?
+  failureReason  String?
+  requestedAt    DateTime              @default(now())
+  processingAt   DateTime?
+  completedAt    DateTime?
+  failedAt       DateTime?
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  wallet       Wallet        @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  payouts      Payout[]
+
+  @@index([userId, status])
+  @@index([organizationId, status])
+  @@index([status])
+}
+
+model Payout {
+  id           String     @id @default(uuid()) @db.Uuid
+  withdrawalId String     @db.Uuid
+  provider     String
+  network      TonNetwork
+  txHash       String?
+  rawResponse  Json?
+  submittedAt  DateTime   @default(now())
+  confirmedAt  DateTime?
+
+  withdrawal Withdrawal @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+
+  @@index([withdrawalId])
+}
+
+// ---------------------------------------------------------------------------
+// Referral
+// ---------------------------------------------------------------------------
+
+model Referral {
+  id             String         @id @default(uuid()) @db.Uuid
+  scope          ReferralScope
+  communityId    String?        @db.Uuid
+  /// communityId, or "platform" for a platform-wide referral, so the unique index below is never bypassed by a NULL.
+  communityKey   String
+  referrerUserId String         @db.Uuid
+  referredUserId String         @db.Uuid
+  status         ReferralStatus @default(PENDING)
+  createdAt      DateTime       @default(now())
+  qualifiedAt    DateTime?
+  rewardedAt     DateTime?
+  rejectedReason String?
+
+  community Community? @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  referrer  User       @relation("ReferralReferrer", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  referred  User       @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@unique([scope, communityKey, referredUserId])
+  @@index([referrerUserId, status])
+  @@index([communityId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Platform services
+// ---------------------------------------------------------------------------
+
+model AIUsage {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @db.Uuid
+  communityId    String?  @db.Uuid
+  provider       String
+  model          String
+  operation      String
+  inputTokens    Int      @default(0)
+  outputTokens   Int      @default(0)
+  estimatedCostMicroUsd Int @default(0)
+  succeeded      Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  community    Community?    @relation(fields: [communityId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([communityId, createdAt])
+}
+
 model FraudSignal {
-  id String @id @default(uuid()) @db.Uuid
-  userId String @db.Uuid
-  type String
-  score Int
-  evidence Json
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  type      String
+  score     Int
+  evidence  Json
   createdAt DateTime @default(now())
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, createdAt])
+  @@index([type, createdAt])
 }
 
 model FraudCase {
-  id String @id @default(uuid()) @db.Uuid
-  userId String @db.Uuid
-  status FraudCaseStatus @default(OPEN)
-  reason String
-  openedAt DateTime @default(now())
+  id         String          @id @default(uuid()) @db.Uuid
+  userId     String          @db.Uuid
+  status     FraudCaseStatus @default(OPEN)
+  reason     String
+  openedAt   DateTime        @default(now())
   resolvedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([status, openedAt])
 }
 
-model AuditLog {
-  id String @id @default(uuid()) @db.Uuid
-  actorType String
-  actorId String
-  action String
-  entityType String
-  entityId String
-  before Json?
-  after Json?
-  ipHash String?
-  createdAt DateTime @default(now())
-  @@index([entityType, entityId, createdAt])
+model Notification {
+  id        String             @id @default(uuid()) @db.Uuid
+  userId    String             @db.Uuid
+  kind      String
+  payload   Json
+  status    NotificationStatus @default(QUEUED)
+  createdAt DateTime           @default(now())
+  sentAt    DateTime?
+  error     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
 }
 
-model AppSettingVersion {
-  id String @id @default(uuid()) @db.Uuid
-  version Int @unique
-  settings Json
-  effectiveAt DateTime
-  createdAt DateTime @default(now())
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorType  String
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  ipHash     String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
 }

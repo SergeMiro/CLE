@@ -11,3 +11,10 @@ test-results/
 *.log
 packages/db/generated/
 
+
+# local state
+.cle/
+.playwright-mcp/
+.env.production
+tsconfig.tsbuildinfo
+*.tsbuildinfo

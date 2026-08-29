@@ -1,0 +1,28 @@
+{
+  "name": "@cle/bot",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/main.ts poll",
+    "start": "node dist/main.js poll",
+    "webhook:set": "tsx src/main.ts webhook:set",
+    "webhook:delete": "tsx src/main.ts webhook:delete",
+    "whoami": "tsx src/main.ts whoami",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests --exclude 'test/integration/**'",
+    "test:integration": "vitest run test/integration"
+  },
+  "dependencies": {
+    "@cle/api": "workspace:*",
+    "@cle/config": "workspace:*",
+    "@cle/db": "workspace:*",
+    "@cle/telegram": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "vitest": "^4.1.0"
+  }
+}
