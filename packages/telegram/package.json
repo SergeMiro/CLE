@@ -1,0 +1,10 @@
+{
+  "name": "@cle/telegram",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "build": "tsc -p tsconfig.json", "lint": "tsc -p tsconfig.json --noEmit", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run" },
+  "devDependencies": { "vitest": "^4.1.0" }
+}
+
