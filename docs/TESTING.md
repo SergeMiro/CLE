@@ -29,6 +29,20 @@ pnpm --filter @cle/miniapp dev       # Mini App → http://localhost:4100
 `seed:demo` создаёт: канал «Science Daily», сообщество, четырёх участников, два
 опубликованных квиза, доход 100 TON, закрытый цикл и выплаченные награды.
 
+**Если браузер на другой машине** (например, VPS + Tailscale), запускайте оба
+сервиса с адресом, который видит браузер — иначе Mini App будет стучаться в
+`localhost` вашего компьютера, а Next в dev-режиме отклонит чужой источник:
+
+```bash
+HOST=100.93.182.14      # адрес сервера, видимый браузеру
+API_URL=http://$HOST:4101 MINI_APP_URL=http://$HOST:4100 \
+  pnpm --filter @cle/api dev
+API_URL=http://$HOST:4101 MINI_APP_URL=http://$HOST:4100 DEV_ORIGINS=$HOST \
+  pnpm --filter @cle/miniapp dev
+```
+
+и открывать `http://$HOST:4100?mockUser=…`.
+
 ### 1.2. Что открыть
 
 Вне Telegram Mini App принимает `?mockUser=<telegram id>` вместо подписи —
