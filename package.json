@@ -1,0 +1,26 @@
+{
+  "name": "cle",
+  "private": true,
+  "packageManager": "pnpm@11.8.0",
+  "engines": { "node": ">=22.0.0", "pnpm": ">=11.0.0" },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:integration": "pnpm --filter @cle/db test:integration",
+    "test:e2e": "playwright test",
+    "db:generate": "pnpm --filter @cle/db generate",
+    "db:migrate": "pnpm --filter @cle/db migrate",
+    "db:seed": "pnpm --filter @cle/db seed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^22.19.15",
+    "prettier": "^3.8.3",
+    "turbo": "^2.8.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

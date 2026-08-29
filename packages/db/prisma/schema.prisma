@@ -1,0 +1,434 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipStatus {
+  UNKNOWN
+  ACTIVE
+  LEFT
+  BANNED
+  REJOIN_COOLDOWN
+}
+enum RewardEligibilityStatus {
+  PENDING
+  ELIGIBLE
+  SUSPENDED
+  BLOCKED
+}
+enum MembershipEventType {
+  JOIN
+  LEAVE
+  REJOIN
+  BAN
+  UNBAN
+}
+enum MembershipEventSource {
+  WEBHOOK
+  ONBOARDING_CHECK
+  SCHEDULED_CHECK
+  WITHDRAWAL_CHECK
+  ADMIN
+}
+enum RevenueStatus {
+  OBSERVED
+  PENDING
+  CONFIRMED
+  FUNDED
+  CANCELLED
+}
+enum RewardCycleStatus {
+  DRAFT
+  CALCULATING
+  CALCULATED
+  APPROVED
+  FINALIZED
+  CANCELLED
+}
+enum RewardAllocationType {
+  GROWTH
+  LOYALTY
+  REFERRAL
+  SCIENCE
+  ADJUSTMENT
+}
+enum RewardAllocationStatus {
+  PENDING
+  AVAILABLE
+  LOCKED
+  CANCELLED
+  PAID
+}
+enum LedgerEntryType {
+  REWARD_PENDING
+  REWARD_UNLOCK
+  REWARD_CANCEL
+  WITHDRAWAL_LOCK
+  WITHDRAWAL_COMPLETE
+  WITHDRAWAL_RELEASE
+  ADMIN_ADJUSTMENT
+}
+enum WithdrawalStatus {
+  REQUESTED
+  LOCKED
+  PROCESSING
+  SUBMITTED
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  REWARDED
+  REJECTED
+}
+enum QuizStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  PUBLISHED
+  CLOSED
+}
+enum QuizDifficulty {
+  EASY
+  NORMAL
+  HARD
+  CHALLENGE
+}
+enum QuizAttemptStatus {
+  STARTED
+  SUBMITTED
+  EXPIRED
+  FLAGGED
+}
+enum FraudCaseStatus {
+  OPEN
+  REVIEW
+  CLEARED
+  BLOCKED
+}
+enum TonNetwork {
+  MAINNET
+  TESTNET
+}
+
+model User {
+  id                      String                  @id @default(uuid()) @db.Uuid
+  telegramId              BigInt                  @unique
+  telegramUsername        String?
+  telegramFirstName       String?
+  telegramLastName        String?
+  firstSeenAt             DateTime                @default(now())
+  lastSeenAt              DateTime                @default(now())
+  firstJoinAt             DateTime?
+  currentJoinAt           DateTime?
+  lastLeaveAt             DateTime?
+  membershipStatus        MembershipStatus        @default(UNKNOWN)
+  rejoinCount             Int                     @default(0)
+  referralCode            String                  @unique
+  referredByUserId        String?                 @db.Uuid
+  rewardEligibilityStatus RewardEligibilityStatus @default(PENDING)
+  fraudScore              Int                     @default(0)
+  fraudStatus             FraudCaseStatus?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  referredBy              User?                   @relation("ReferredBy", fields: [referredByUserId], references: [id])
+  referrals               User[]                  @relation("ReferredBy")
+  memberships             MembershipEvent[]
+  wallets                 Wallet[]
+  allocations             RewardAllocation[]
+  ledgerEntries           LedgerEntry[]
+  withdrawals             Withdrawal[]
+  quizAttempts            QuizAttempt[]
+  referralsSent           Referral[]              @relation("Referrer")
+  referralReceived        Referral?               @relation("Referred")
+  fraudSignals            FraudSignal[]
+  eligibilitySnapshots    RewardEligibilitySnapshot[]
+  @@index([membershipStatus])
+  @@index([firstJoinAt])
+}
+
+model MembershipEvent {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  type MembershipEventType
+  telegramStatus String?
+  occurredAt DateTime
+  source MembershipEventSource
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@index([userId, occurredAt])
+}
+
+model Wallet {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  addressRaw String @unique
+  addressFriendly String
+  network TonNetwork
+  verifiedAt DateTime?
+  isPrimary Boolean @default(false)
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  withdrawals Withdrawal[]
+  @@index([userId])
+}
+
+model RevenueEntry {
+  id String @id @default(uuid()) @db.Uuid
+  source String
+  amountNanoton BigInt
+  periodStart DateTime
+  periodEnd DateTime
+  status RevenueStatus
+  externalReference String? @unique
+  metadata Json?
+  createdAt DateTime @default(now())
+  confirmedAt DateTime?
+  @@index([status, periodStart])
+}
+
+model RewardCycle {
+  id String @id @default(uuid()) @db.Uuid
+  periodStart DateTime
+  periodEnd DateTime
+  grossRevenueNanoton BigInt
+  creatorShareNanoton BigInt
+  communityShareNanoton BigInt
+  growthPoolNanoton BigInt
+  loyaltyPoolNanoton BigInt
+  referralPoolNanoton BigInt
+  sciencePoolNanoton BigInt
+  configurationSnapshot Json
+  status RewardCycleStatus @default(DRAFT)
+  calculatedAt DateTime?
+  approvedAt DateTime?
+  finalizedAt DateTime?
+  createdAt DateTime @default(now())
+  allocations RewardAllocation[]
+  snapshots RewardEligibilitySnapshot[]
+  @@index([status, periodStart])
+}
+
+model RewardEligibilitySnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  cycleId String @db.Uuid
+  userId String @db.Uuid
+  membershipAgeDays Int
+  membershipStatus MembershipStatus
+  rejoinCount Int
+  growthEligible Boolean
+  loyaltyEligible Boolean
+  referralUnits Int
+  sciencePoints Int
+  loyaltyWeightBps Int
+  createdAt DateTime @default(now())
+  cycle RewardCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@unique([cycleId, userId])
+}
+
+model RewardAllocation {
+  id String @id @default(uuid()) @db.Uuid
+  cycleId String @db.Uuid
+  userId String @db.Uuid
+  type RewardAllocationType
+  amountNanoton BigInt
+  weight BigInt?
+  sourceUnits BigInt?
+  idempotencyKey String @unique
+  status RewardAllocationStatus
+  eligibleAt DateTime?
+  availableAt DateTime?
+  cancelledAt DateTime?
+  paidAt DateTime?
+  createdAt DateTime @default(now())
+  cycle RewardCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  ledgerEntries LedgerEntry[]
+  @@unique([cycleId, userId, type])
+  @@index([userId, status])
+}
+
+model LedgerEntry {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  type LedgerEntryType
+  amountNanoton BigInt
+  rewardAllocationId String? @db.Uuid
+  withdrawalId String? @db.Uuid
+  reference String @unique
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  rewardAllocation RewardAllocation? @relation(fields: [rewardAllocationId], references: [id], onDelete: Restrict)
+  withdrawal Withdrawal? @relation(fields: [withdrawalId], references: [id], onDelete: Restrict)
+  @@index([userId, createdAt])
+}
+
+model Withdrawal {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  walletId String @db.Uuid
+  amountNanoton BigInt
+  idempotencyKey String @unique
+  status WithdrawalStatus @default(REQUESTED)
+  txHash String? @unique
+  failureReason String?
+  requestedAt DateTime @default(now())
+  processingAt DateTime?
+  completedAt DateTime?
+  failedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  ledgerEntries LedgerEntry[]
+  @@index([userId, status])
+  @@index([status])
+}
+
+model Referral {
+  id String @id @default(uuid()) @db.Uuid
+  referrerUserId String @db.Uuid
+  referredUserId String @unique @db.Uuid
+  status ReferralStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  qualifiedAt DateTime?
+  rewardedAt DateTime?
+  referrer User @relation("Referrer", fields: [referrerUserId], references: [id], onDelete: Restrict)
+  referred User @relation("Referred", fields: [referredUserId], references: [id], onDelete: Restrict)
+  @@index([referrerUserId, status])
+}
+
+model Article {
+  id String @id @default(uuid()) @db.Uuid
+  telegramMessageId BigInt?
+  telegramPostUrl String?
+  title String
+  summary String
+  referenceContent String
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+  quiz Quiz?
+}
+
+model Quiz {
+  id String @id @default(uuid()) @db.Uuid
+  postId String @unique @db.Uuid
+  title String
+  status QuizStatus @default(DRAFT)
+  availableFrom DateTime?
+  availableUntil DateTime?
+  maxAttempts Int @default(1)
+  createdAt DateTime @default(now())
+  approvedAt DateTime?
+  publishedAt DateTime?
+  post Article @relation(fields: [postId], references: [id], onDelete: Restrict)
+  questions QuizQuestion[]
+  attempts QuizAttempt[]
+  @@index([status, availableFrom])
+}
+
+model QuizQuestion {
+  id String @id @default(uuid()) @db.Uuid
+  quizId String @db.Uuid
+  question String
+  difficulty QuizDifficulty
+  basePoints Int
+  sortOrder Int
+  createdAt DateTime @default(now())
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options QuizOption[]
+  answers QuizAnswer[]
+  @@unique([quizId, sortOrder])
+}
+
+model QuizOption {
+  id String @id @default(uuid()) @db.Uuid
+  questionId String @db.Uuid
+  text String
+  isCorrect Boolean
+  explanation String
+  sortOrder Int
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers QuizAnswer[]
+  @@unique([questionId, sortOrder])
+}
+
+model QuizAttempt {
+  id String @id @default(uuid()) @db.Uuid
+  quizId String @db.Uuid
+  userId String @db.Uuid
+  startedAt DateTime @default(now())
+  submittedAt DateTime?
+  rawPoints Int @default(0)
+  streakMultiplierBps Int @default(10000)
+  finalPoints Int @default(0)
+  status QuizAttemptStatus @default(STARTED)
+  idempotencyKey String @unique
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  answers QuizAnswer[]
+  @@unique([quizId, userId])
+  @@index([userId, startedAt])
+}
+
+model QuizAnswer {
+  id String @id @default(uuid()) @db.Uuid
+  attemptId String @db.Uuid
+  questionId String @db.Uuid
+  selectedOptionId String @db.Uuid
+  isCorrect Boolean
+  pointsAwarded Int
+  answeredAt DateTime @default(now())
+  attempt QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selectedOption QuizOption @relation(fields: [selectedOptionId], references: [id], onDelete: Restrict)
+  @@unique([attemptId, questionId])
+}
+
+model FraudSignal {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  type String
+  score Int
+  evidence Json
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@index([userId, createdAt])
+}
+
+model FraudCase {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  status FraudCaseStatus @default(OPEN)
+  reason String
+  openedAt DateTime @default(now())
+  resolvedAt DateTime?
+  @@index([status, openedAt])
+}
+
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+  actorType String
+  actorId String
+  action String
+  entityType String
+  entityId String
+  before Json?
+  after Json?
+  ipHash String?
+  createdAt DateTime @default(now())
+  @@index([entityType, entityId, createdAt])
+}
+
+model AppSettingVersion {
+  id String @id @default(uuid()) @db.Uuid
+  version Int @unique
+  settings Json
+  effectiveAt DateTime
+  createdAt DateTime @default(now())
+}
