@@ -34,7 +34,7 @@ pnpm --filter @cle/miniapp dev       # Mini App → http://localhost:4100
 `localhost` вашего компьютера, а Next в dev-режиме отклонит чужой источник:
 
 ```bash
-HOST=100.93.182.14      # адрес сервера, видимый браузеру
+HOST=<адрес сервера, видимый браузеру>   # LAN, tailnet или туннель
 API_URL=http://$HOST:4101 MINI_APP_URL=http://$HOST:4100 \
   pnpm --filter @cle/api dev
 API_URL=http://$HOST:4101 MINI_APP_URL=http://$HOST:4100 DEV_ORIGINS=$HOST \
