@@ -1,4 +1,5 @@
 import {
+  type InlineKeyboardButton,
   type TelegramChatMemberUpdated,
   type TelegramMessage,
   type TelegramUpdate,
@@ -8,7 +9,6 @@ import {
   isActiveMembership,
   isBanned,
   messageText,
-  miniAppLink,
   updateKind,
 } from '@cle/telegram';
 import type { AppContext } from '../context.js';
@@ -192,9 +192,9 @@ async function onPrivateMessage(ctx: AppContext, message: TelegramMessage): Prom
   });
 
   const payload = decodeStartPayload(text.slice('/start'.length).trim());
-  let link = ctx.env.TELEGRAM_BOT_USERNAME
-    ? miniAppLink({ botUsername: ctx.env.TELEGRAM_BOT_USERNAME, appName: 'app' })
-    : ctx.env.MINI_APP_URL;
+  // In a private chat the Mini App opens straight from a web_app button, so no
+  // deep link is involved and no Mini App short name has to be configured.
+  let button: InlineKeyboardButton = { text: 'Open CLE', web_app: { url: ctx.env.MINI_APP_URL } };
   let reply = 'Open CLE to see your communities, quizzes and balance.';
 
   if (payload?.kind === 'referral') {
@@ -208,14 +208,14 @@ async function onPrivateMessage(ctx: AppContext, message: TelegramMessage): Prom
       reply = 'You were invited to CLE. Join the channel, take the quizzes and start earning.';
     }
   } else if (payload?.kind === 'quiz') {
-    link = quizLink(ctx, payload.quizId);
+    button = { text: 'Open the quiz', web_app: { url: `${ctx.env.MINI_APP_URL}/quiz/${payload.quizId}` } };
     reply = 'Your quiz is ready.';
   }
 
   await ctx.telegram.sendMessage({
     chatId: message.chat.id,
     text: reply,
-    replyMarkup: { inline_keyboard: [[{ text: 'Open CLE', url: link }]] },
+    replyMarkup: { inline_keyboard: [[button]] },
   });
   return { kind: 'message', handled: true, detail: payload?.kind ?? 'start' };
 }

@@ -53,9 +53,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setStatus('loading');
     setError(undefined);
     try {
+      const credential = credentials();
       const expected = expectedTelegramId();
       const existing = storedToken();
-      if (existing) {
+      // Arriving through a deep link means signing in again, because the server
+      // is what decodes the payload — reusing a stored session would silently
+      // drop it and leave the person on the home screen.
+      if (existing && !credential?.startParam) {
         try {
           const profile = await loadUser(existing);
           // Reuse the session only if it belongs to the account opening the app.
@@ -70,7 +74,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const credential = credentials();
       if (!credential) {
         setStatus('anonymous');
         return;

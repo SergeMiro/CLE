@@ -217,7 +217,11 @@ export async function publishQuiz(ctx: AppContext, quizId: string, actor?: Actor
 export function quizLink(ctx: AppContext, quizId: string): string {
   const botUsername = ctx.env.TELEGRAM_BOT_USERNAME;
   if (!botUsername) return `${ctx.env.MINI_APP_URL}/quiz/${quizId}`;
-  return miniAppLink({ botUsername, appName: 'app', payload: { kind: 'quiz', quizId } });
+  return miniAppLink({
+    botUsername,
+    appName: ctx.env.TELEGRAM_MINI_APP_NAME,
+    payload: { kind: 'quiz', quizId },
+  });
 }
 
 export function quizStartPayload(quizId: string): string {

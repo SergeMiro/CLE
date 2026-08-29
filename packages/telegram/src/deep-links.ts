@@ -54,14 +54,35 @@ export function decodeStartPayload(raw: string): StartPayload | undefined {
 
 export interface MiniAppLinkOptions {
   botUsername: string;
-  /** Direct Mini App short name, when the app is published as t.me/<bot>/<app>. */
-  appName?: string;
-  payload?: StartPayload;
+  /**
+   * Short name of a named Mini App, published with /newapp as t.me/<bot>/<name>.
+   * Leave it unset when the bot has a Main Mini App instead: that one opens from
+   * the bot link itself.
+   */
+  appName?: string | undefined;
+  payload?: StartPayload | undefined;
 }
 
+/**
+ * A link that opens the Mini App, not a chat with the bot.
+ *
+ * Telegram has two ways to publish one, and they need different links:
+ *   named Mini App  → t.me/<bot>/<name>?startapp=<payload>
+ *   Main Mini App   → t.me/<bot>?startapp=<payload>
+ *
+ * The `start=` form is deliberately not used here: it sends /start to the bot
+ * and leaves the person in a chat, which is exactly the dead end this avoids.
+ */
 export function miniAppLink({ botUsername, appName, payload }: MiniAppLinkOptions): string {
   const bot = botUsername.replace(/^@/, '');
+  const encoded = payload ? encodeStartPayload(payload) : '';
+  const base = appName ? `https://t.me/${bot}/${appName}` : `https://t.me/${bot}`;
+  return `${base}?startapp=${encoded}`;
+}
+
+/** A link that opens a conversation with the bot, optionally with a /start payload. */
+export function botStartLink({ botUsername, payload }: Omit<MiniAppLinkOptions, 'appName'>): string {
+  const bot = botUsername.replace(/^@/, '');
   const encoded = payload ? encodeStartPayload(payload) : undefined;
-  if (appName) return `https://t.me/${bot}/${appName}${encoded ? `?startapp=${encoded}` : ''}`;
   return `https://t.me/${bot}${encoded ? `?start=${encoded}` : ''}`;
 }

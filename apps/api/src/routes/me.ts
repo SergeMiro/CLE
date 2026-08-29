@@ -163,7 +163,7 @@ export function registerMeRoutes(app: FastifyInstance, ctx: AppContext): void {
       ctx.env.TELEGRAM_BOT_USERNAME
         ? miniAppLink({
             botUsername: ctx.env.TELEGRAM_BOT_USERNAME,
-            appName: 'app',
+            appName: ctx.env.TELEGRAM_MINI_APP_NAME,
             payload: { kind: 'referral', referralCode: user.referralCode, ...(communityId ? { communityId } : {}) },
           })
         : `${ctx.env.MINI_APP_URL}?startapp=${encodeStartPayload({ kind: 'referral', referralCode: user.referralCode, ...(communityId ? { communityId } : {}) })}`;

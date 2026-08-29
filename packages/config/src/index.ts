@@ -22,6 +22,8 @@ export const environmentSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_BOT_USERNAME: z.string().optional(),
   TELEGRAM_BOT_ID: z.coerce.bigint().optional(),
+  /** Short name of a named Mini App (/newapp). Leave unset when the bot has a Main Mini App. */
+  TELEGRAM_MINI_APP_NAME: z.string().regex(/^[A-Za-z0-9_]{3,30}$/).optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
   /** APP_MODE=mock only: JSON file holding the simulated Telegram world, shared between processes. */
   MOCK_TELEGRAM_STATE_FILE: z.string().optional(),

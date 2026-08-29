@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DeepLinkError, decodeStartPayload, encodeStartPayload, miniAppLink } from '../src/index.js';
+import { DeepLinkError, botStartLink, decodeStartPayload, encodeStartPayload, miniAppLink } from '../src/index.js';
 
 const communityId = '3f2b1c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
 const quizId = 'aabbccdd-1122-4333-8444-555566667777';
@@ -49,17 +49,37 @@ describe('start payloads', () => {
 });
 
 describe('miniAppLink', () => {
-  it('builds a direct Mini App link with a start parameter', () => {
+  it('opens a named Mini App published with /newapp', () => {
     expect(miniAppLink({ botUsername: '@cle_bot', appName: 'cle', payload: { kind: 'quiz', quizId } })).toBe(
       `https://t.me/cle_bot/cle?startapp=q_${quizId.replace(/-/g, '')}`,
     );
   });
 
-  it('falls back to a bot start link when no app short name exists', () => {
-    expect(miniAppLink({ botUsername: 'cle_bot', payload: { kind: 'community', communityId } })).toContain('?start=c_');
+  it('opens a Main Mini App when no short name is configured', () => {
+    // Without startapp the link lands in a chat with the bot instead of the app,
+    // which is the dead end this form exists to avoid.
+    expect(miniAppLink({ botUsername: 'cle_bot', payload: { kind: 'community', communityId } })).toBe(
+      `https://t.me/cle_bot?startapp=c_${communityId.replace(/-/g, '')}`,
+    );
   });
 
-  it('builds a plain link with no payload', () => {
-    expect(miniAppLink({ botUsername: 'cle_bot' })).toBe('https://t.me/cle_bot');
+  it('still opens the app when there is no payload', () => {
+    expect(miniAppLink({ botUsername: 'cle_bot' })).toBe('https://t.me/cle_bot?startapp=');
+  });
+
+  it('strips a leading @ from the username', () => {
+    expect(miniAppLink({ botUsername: '@cle_bot' })).toBe('https://t.me/cle_bot?startapp=');
+  });
+});
+
+describe('botStartLink', () => {
+  it('opens a conversation with the bot, carrying a start payload', () => {
+    expect(botStartLink({ botUsername: 'cle_bot', payload: { kind: 'referral', referralCode: 'ABC123' } })).toBe(
+      'https://t.me/cle_bot?start=r_ABC123',
+    );
+  });
+
+  it('opens a plain conversation with no payload', () => {
+    expect(botStartLink({ botUsername: '@cle_bot' })).toBe('https://t.me/cle_bot');
   });
 });
