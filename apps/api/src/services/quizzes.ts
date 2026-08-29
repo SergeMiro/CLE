@@ -5,6 +5,7 @@ import { encodeStartPayload, miniAppLink } from '@cle/telegram';
 import type { AppContext } from '../context.js';
 import { badRequest, conflict, forbidden, notFound, unprocessable } from '../errors.js';
 import { recordAudit } from './audit.js';
+import { ensureMembershipKnown } from './membership.js';
 import { effectiveQuizPolicy } from './policies.js';
 import { type Actor, requireCommunityAccess } from './rbac.js';
 
@@ -237,6 +238,10 @@ export interface QuizForMember {
   communityName: string;
   attemptStatus: 'AVAILABLE' | 'SUBMITTED';
   earnedPoints?: number;
+  /** Whether the reader is in the channel, checked with Telegram when unknown. */
+  membershipStatus: string;
+  canAnswer: boolean;
+  channelUsername: string | null;
   questions: { id: string; prompt: string; basePoints: number; options: { id: string; text: string }[] }[];
 }
 
@@ -245,13 +250,15 @@ export async function getQuizForMember(ctx: AppContext, userId: string, quizId: 
   const quiz = await ctx.prisma.quiz.findUnique({
     where: { id: quizId },
     include: {
-      community: { select: { id: true, name: true } },
+      community: { select: { id: true, name: true, channel: { select: { username: true } } } },
       questions: { include: { options: { orderBy: { sortOrder: 'asc' } } }, orderBy: { sortOrder: 'asc' } },
     },
   });
   if (!quiz) throw notFound('quiz not found');
   if (quiz.status !== 'PUBLISHED') throw notFound('quiz not found');
 
+  // Resolved here so the reader is told to join before answering, not after.
+  const member = await ensureMembershipKnown(ctx, { communityId: quiz.communityId, userId, source: 'ONBOARDING_CHECK' });
   const attempt = await ctx.prisma.quizAttempt.findUnique({ where: { quizId_userId: { quizId, userId } } });
   return {
     id: quiz.id,
@@ -262,6 +269,9 @@ export async function getQuizForMember(ctx: AppContext, userId: string, quizId: 
     communityName: quiz.community.name,
     attemptStatus: attempt?.status === 'SUBMITTED' ? 'SUBMITTED' : 'AVAILABLE',
     ...(attempt?.status === 'SUBMITTED' ? { earnedPoints: attempt.finalPoints } : {}),
+    membershipStatus: member.status,
+    canAnswer: member.status === 'ACTIVE' || member.status === 'REJOIN_COOLDOWN',
+    channelUsername: quiz.community.channel.username,
     questions: quiz.questions.map((question) => ({
       id: question.id,
       prompt: question.prompt,
@@ -298,10 +308,12 @@ export async function submitQuizAttempt(ctx: AppContext, userId: string, quizId:
   if (!quiz || quiz.status !== 'PUBLISHED') throw notFound('quiz not found');
   if (quiz.availableUntil && quiz.availableUntil < ctx.now()) throw unprocessable('this quiz is closed');
 
-  const member = await ctx.prisma.communityMember.findUnique({
-    where: { communityId_userId: { communityId: quiz.communityId, userId } },
+  const member = await ensureMembershipKnown(ctx, {
+    communityId: quiz.communityId,
+    userId,
+    source: 'ONBOARDING_CHECK',
   });
-  if (!member || (member.status !== 'ACTIVE' && member.status !== 'REJOIN_COOLDOWN')) {
+  if (member.status !== 'ACTIVE' && member.status !== 'REJOIN_COOLDOWN') {
     throw forbidden('join the channel to earn learning points');
   }
 

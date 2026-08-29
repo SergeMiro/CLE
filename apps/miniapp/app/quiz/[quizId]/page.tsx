@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../../components/shell';
 import { api } from '../../../lib/api';
 import { useSession } from '../../../lib/session';
-import { haptic } from '../../../lib/telegram';
+import { haptic, openLink } from '../../../lib/telegram';
 import { useApi } from '../../../lib/use-api';
 
 interface QuizQuestion {
@@ -22,6 +22,9 @@ interface Quiz {
   communityName: string;
   attemptStatus: 'AVAILABLE' | 'SUBMITTED';
   earnedPoints?: number;
+  membershipStatus: string;
+  canAnswer: boolean;
+  channelUsername: string | null;
   questions: QuizQuestion[];
 }
 
@@ -138,6 +141,24 @@ function QuizContent() {
   if (loading && !data) return <Loading />;
   if (error) return <ErrorNotice message={error} />;
   if (!data) return null;
+  if (!data.canAnswer) {
+    // Answering without being in the channel earns nothing, so say that before
+    // the questions rather than after the submission is refused.
+    return (
+      <div className="card">
+        <h2>Join {data.communityName} first</h2>
+        <p className="muted small">
+          Learning points are paid to members of the channel. Join it, then come back to this quiz.
+        </p>
+        {data.channelUsername ? (
+          <button type="button" className="btn mt" onClick={() => openLink(`https://t.me/${data.channelUsername}`)}>
+            Open the channel
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
   if (data.attemptStatus === 'SUBMITTED') {
     return (
       <div className="card center">

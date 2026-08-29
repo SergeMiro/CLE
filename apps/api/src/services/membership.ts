@@ -105,3 +105,41 @@ export async function refreshMemberCount(ctx: AppContext, communityId: string): 
 export function membershipAgeDays(member: Pick<CommunityMember, 'currentJoinAt'>, at: Date): number {
   return member.currentJoinAt ? daysBetween(member.currentJoinAt, at) : 0;
 }
+
+/**
+ * Makes sure CLE knows whether this person is in the channel, asking Telegram
+ * when it does not.
+ *
+ * Membership arrives by webhook, but only for people who join after the bot was
+ * made an administrator — everyone who was already subscribed is invisible until
+ * something asks. Someone opening a quiz from a channel post has obviously seen
+ * that channel, so requiring them to find a settings screen and press a button
+ * first is a dead end.
+ */
+export async function ensureMembershipKnown(
+  ctx: AppContext,
+  input: { communityId: string; userId: string; source: MembershipEventSource; maxAgeMinutes?: number },
+): Promise<CommunityMember> {
+  const member = await ctx.prisma.communityMember.findUnique({
+    where: { communityId_userId: { communityId: input.communityId, userId: input.userId } },
+  });
+
+  const active = member?.status === 'ACTIVE' || member?.status === 'REJOIN_COOLDOWN';
+  const stale =
+    !member ||
+    (!active && member.status !== 'BANNED' &&
+      member.updatedAt.getTime() < ctx.now().getTime() - (input.maxAgeMinutes ?? 5) * 60_000);
+  if (!stale) return member;
+
+  try {
+    const synced = await syncMembership(ctx, {
+      communityId: input.communityId,
+      userId: input.userId,
+      source: input.source,
+    });
+    return synced.member;
+  } catch {
+    // Telegram being unavailable must not invent a membership; fall back to what is known.
+    return member ?? ensureMember(ctx, input.communityId, input.userId);
+  }
+}

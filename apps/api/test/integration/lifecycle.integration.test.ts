@@ -275,10 +275,14 @@ describe('CLE end-to-end lifecycle', () => {
   it('refuses to score a quiz for someone who is not in the channel', async () => {
     const outsider = await signIn(harness, 500_099, 'outsider');
     const quiz = await call(harness, { method: 'GET', url: `/api/v1/quizzes/${quizId}`, token: outsider.token });
+    // The quiz says up front that this person may not answer.
+    expect(quiz.body.canAnswer).toBe(false);
+    expect(quiz.body.channelUsername).toBe('science_daily_test');
     const answers = quiz.body.questions.map((question: any) => ({ questionId: question.id, optionId: question.options[0].id }));
     const denied = await call(harness, { method: 'POST', url: `/api/v1/quizzes/${quizId}/submit`, token: outsider.token, body: { answers } });
     expect(denied.status).toBe(403);
   });
+
 
   it('splits revenue as 10% platform fee, 5% creator, the rest to the community', async () => {
     const recorded = await call(harness, {
@@ -417,6 +421,23 @@ describe('CLE end-to-end lifecycle', () => {
     });
     expect(tooLarge.status).toBe(422);
     expect(tooLarge.body.message).toMatch(/insufficient/);
+  });
+
+  it('recognises a subscriber CLE has never seen before, without asking them to press anything', async () => {
+    // Someone already subscribed when the bot was added generates no chat_member
+    // update, so CLE has no record of them. Opening a quiz from the channel must
+    // still work: the membership is resolved with Telegram on the spot. Runs last
+    // because it adds an eligible member to the community.
+    const veteran = await signIn(harness, 500_500, 'veteran');
+    joinChannel(harness, 500_500);
+    const quiz = await call(harness, { method: 'GET', url: `/api/v1/quizzes/${quizId}`, token: veteran.token });
+    expect(quiz.body.canAnswer).toBe(true);
+    expect(quiz.body.membershipStatus).toBe('ACTIVE');
+
+    const answers = quiz.body.questions.map((question: any) => ({ questionId: question.id, optionId: question.options[0].id }));
+    const scored = await call(harness, { method: 'POST', url: `/api/v1/quizzes/${quizId}/submit`, token: veteran.token, body: { answers } });
+    expect(scored.status).toBe(200);
+    expect(scored.body.correctCount).toBe(3);
   });
 
   it('reports the creator and platform view of the same money', async () => {
