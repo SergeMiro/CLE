@@ -6,7 +6,18 @@ export class ApiError extends Error {
   }
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4101';
+declare global {
+  interface Window {
+    __CLE_API_URL__?: string;
+  }
+}
+
+/** Injected by the server layout at request time; the build-time value is only a fallback. */
+export function apiBaseUrl(): string {
+  if (typeof window !== 'undefined' && window.__CLE_API_URL__) return window.__CLE_API_URL__;
+  return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4101';
+}
+
 const TOKEN_KEY = 'cle.session.token';
 
 export function storedToken(): string | undefined {
@@ -28,7 +39,7 @@ export interface RequestOptions {
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const token = options.token ?? storedToken();
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const response = await fetch(`${apiBaseUrl()}${path}`, {
     method: options.method ?? 'GET',
     headers: {
       ...(options.body === undefined ? {} : { 'content-type': 'application/json' }),

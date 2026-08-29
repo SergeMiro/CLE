@@ -8,6 +8,11 @@
       "outputs": [
         "dist/**",
         ".next/**"
+      ],
+      "env": [
+        "API_URL",
+        "NEXT_PUBLIC_API_URL",
+        "NODE_ENV"
       ]
     },
     "lint": {

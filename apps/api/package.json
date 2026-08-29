@@ -12,7 +12,8 @@
     "test": "vitest run --exclude 'test/integration/**'",
     "test:integration": "vitest run test/integration",
     "seed:demo": "tsx src/scripts/seed-demo.ts",
-    "demo:join": "tsx src/scripts/demo-join.ts"
+    "demo:join": "tsx src/scripts/demo-join.ts",
+    "onboard": "tsx src/scripts/onboard-channel.ts"
   },
   "dependencies": {
     "@cle/ai": "workspace:*",

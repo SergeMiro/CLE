@@ -76,6 +76,17 @@ async function onChannelPost(ctx: AppContext, message: TelegramMessage): Promise
   if (tenant.community.status !== 'ACTIVE') return { kind: 'channel_post', handled: false, detail: 'community is not active' };
   if (!messageText(message).trim()) return { kind: 'channel_post', handled: false, detail: 'post has no text' };
 
+  // CLE posts its own call to action into the channel, and Telegram delivers
+  // that back as a channel_post. Quizzing our own announcement would be absurd,
+  // so anything the bot wrote is ignored — by author, and by message id for the
+  // announcements we know we published.
+  if (message.from?.is_bot) return { kind: 'channel_post', handled: false, detail: 'ignoring the bot\'s own post' };
+  const ownAnnouncement = await ctx.prisma.quiz.findFirst({
+    where: { communityId: tenant.community.id, publishedMessageId: BigInt(message.message_id) },
+    select: { id: true },
+  });
+  if (ownAnnouncement) return { kind: 'channel_post', handled: false, detail: 'ignoring a quiz announcement' };
+
   const ingested = await ingestChannelPost(ctx, tenant.community.id, message);
   if (!ingested.quizRequested) return { kind: 'channel_post', handled: true, detail: ingested.skipReason ?? 'skipped' };
 

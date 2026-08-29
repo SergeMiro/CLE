@@ -184,6 +184,45 @@ describe('CLE end-to-end lifecycle', () => {
     expect(posted?.replyMarkup?.inline_keyboard[0]?.[0]?.url).toContain('startapp=q_');
   });
 
+  it('never quizzes its own announcement', async () => {
+    // The call to action CLE posted is delivered back as a channel_post; treating
+    // it as content would generate a quiz about the quiz.
+    const announcement = await harness.prisma.quiz.findFirstOrThrow({ where: { id: quizId }, select: { publishedMessageId: true } });
+    const byMessageId = await call(harness, {
+      method: 'POST',
+      url: '/api/v1/telegram/webhook',
+      body: {
+        update_id: 2,
+        channel_post: {
+          message_id: Number(announcement.publishedMessageId),
+          date: Math.floor(Date.now() / 1000),
+          chat: { id: CHANNEL_CHAT_ID, type: 'channel', username: 'science_daily_test' },
+          text: SCIENCE_POST,
+        },
+      },
+    });
+    expect(byMessageId.body.detail).toBe('ignoring a quiz announcement');
+
+    const byAuthor = await call(harness, {
+      method: 'POST',
+      url: '/api/v1/telegram/webhook',
+      body: {
+        update_id: 3,
+        channel_post: {
+          message_id: 999_001,
+          date: Math.floor(Date.now() / 1000),
+          chat: { id: CHANNEL_CHAT_ID, type: 'channel', username: 'science_daily_test' },
+          from: { id: 777_000, is_bot: true, username: 'cle_mock_bot' },
+          text: SCIENCE_POST,
+        },
+      },
+    });
+    expect(byAuthor.body.detail).toContain("bot's own post");
+
+    const quizzes = await call(harness, { method: 'GET', url: `/api/v1/communities/${communityId}/quizzes`, token: creator.token });
+    expect(quizzes.body).toHaveLength(1);
+  });
+
   it('ignores a redelivered Telegram update', async () => {
     const replay = await call(harness, {
       method: 'POST',
