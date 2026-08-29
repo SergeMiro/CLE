@@ -70,9 +70,14 @@ export function RequireSession({ children }: { children: ReactNode }) {
       <div className="card">
         <h2>Open CLE from Telegram</h2>
         <p className="muted small">
-          This Mini App authenticates with the Telegram account that opened it. Open it from the CLE bot, or, during local
-          development, append <span className="mono">?mockUser=&lt;telegram id&gt;</span> to the address.
+          This Mini App authenticates with the Telegram account that opened it. Open it from the CLE bot.
         </p>
+        {/* The development shortcut only exists in a mock build, so production never advertises it. */}
+        {process.env.NODE_ENV === 'production' ? null : (
+          <p className="muted small">
+            During local development, append <span className="mono">?mockUser=&lt;telegram id&gt;</span> to the address.
+          </p>
+        )}
       </div>
     );
   }
