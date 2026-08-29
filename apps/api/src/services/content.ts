@@ -1,3 +1,4 @@
+import { detectLanguage } from '@cle/ai';
 import type { ContentItem } from '@cle/db';
 import { type TelegramMessage, messageText, messageUrl } from '@cle/telegram';
 import type { AppContext } from '../context.js';
@@ -42,7 +43,9 @@ export async function ingestChannelPost(ctx: AppContext, communityId: string, me
 
   const data = {
     text,
-    language: community.language,
+    // Detected per post: a community's default language says nothing about the
+    // language a particular post was written in.
+    language: detectLanguage(text, community.language),
     category: category ?? null,
     topics,
     mediaMetadata: (message.photo ? { kind: 'photo' } : message.video ? { kind: 'video' } : null) as never,

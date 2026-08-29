@@ -128,6 +128,34 @@ export async function approveQuiz(ctx: AppContext, actor: Actor, quizId: string)
   return ctx.prisma.quiz.update({ where: { id: quizId }, data: { status: 'APPROVED', approvedAt: ctx.now() } });
 }
 
+interface Announcement {
+  headline: string;
+  questions: (count: number) => string;
+  reward: (points: number) => string;
+}
+
+const ANNOUNCEMENTS: Record<string, Announcement> = {
+  en: {
+    headline: 'TEST YOUR KNOWLEDGE',
+    questions: (count) => `${count} question${count === 1 ? '' : 's'} about the post above.`,
+    reward: (points) => `Earn up to ${points} CLE learning points.`,
+  },
+  ru: {
+    headline: 'ПРОВЕРЬ СЕБЯ',
+    questions: (count) => `${count} ${count === 1 ? 'вопрос' : count < 5 ? 'вопроса' : 'вопросов'} по посту выше.`,
+    reward: (points) => `Можно заработать до ${points} очков обучения CLE.`,
+  },
+  uk: {
+    headline: 'ПЕРЕВІР СЕБЕ',
+    questions: (count) => `${count} ${count === 1 ? 'питання' : 'питань'} за постом вище.`,
+    reward: (points) => `Можна заробити до ${points} балів навчання CLE.`,
+  },
+};
+
+export function announcementFor(language: string): Announcement {
+  return ANNOUNCEMENTS[language.slice(0, 2).toLowerCase()] ?? ANNOUNCEMENTS.en!;
+}
+
 export interface PublishResult {
   quiz: Quiz;
   messageId: number | undefined;
@@ -151,11 +179,12 @@ export async function publishQuiz(ctx: AppContext, quizId: string, actor?: Actor
 
   const policy = await effectiveQuizPolicy(ctx, quiz.communityId);
   const link = quizLink(ctx, quiz.id);
+  const announcement = announcementFor(quiz.language);
   const text = [
-    'TEST YOUR KNOWLEDGE',
+    announcement.headline,
     '',
-    `${quiz._count.questions} question${quiz._count.questions === 1 ? '' : 's'} about the post above.`,
-    `Earn up to ${quiz.totalPoints} CLE learning points.`,
+    announcement.questions(quiz._count.questions),
+    announcement.reward(quiz.totalPoints),
   ].join('\n');
 
   const message = await ctx.telegram.sendMessage({

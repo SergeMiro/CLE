@@ -6,6 +6,7 @@ import { normaliseChannelReference } from '../src/services/channels.js';
 import { deriveSlug, normaliseSlug } from '../src/services/organizations.js';
 import { ROLE_CAPABILITIES } from '../src/services/rbac.js';
 import { serialize } from '../src/serialization.js';
+import { announcementFor } from '../src/services/quizzes.js';
 
 describe('serialize', () => {
   it('renders bigint money as a string so no precision is lost in JSON', () => {
@@ -133,5 +134,30 @@ describe('http errors', () => {
     expect(badRequest('nope')).toMatchObject({ statusCode: 400, code: 'bad_request' });
     expect(forbidden()).toMatchObject({ statusCode: 403, code: 'forbidden' });
     expect(notFound()).toMatchObject({ statusCode: 404, code: 'not_found' });
+  });
+});
+
+describe('quiz announcement', () => {
+  it('speaks the language of the quiz', () => {
+    expect(announcementFor('ru').headline).toBe('ПРОВЕРЬ СЕБЯ');
+    expect(announcementFor('en').headline).toBe('TEST YOUR KNOWLEDGE');
+    expect(announcementFor('uk').headline).toBe('ПЕРЕВІР СЕБЕ');
+  });
+
+  it('falls back to English for a language it does not know', () => {
+    expect(announcementFor('pt-BR').headline).toBe('TEST YOUR KNOWLEDGE');
+    expect(announcementFor('').headline).toBe('TEST YOUR KNOWLEDGE');
+  });
+
+  it('accepts a regional tag', () => {
+    expect(announcementFor('RU-ru').headline).toBe('ПРОВЕРЬ СЕБЯ');
+  });
+
+  it('counts questions the way each language does', () => {
+    expect(announcementFor('ru').questions(1)).toContain('1 вопрос ');
+    expect(announcementFor('ru').questions(3)).toContain('3 вопроса');
+    expect(announcementFor('ru').questions(7)).toContain('7 вопросов');
+    expect(announcementFor('en').questions(1)).toContain('1 question ');
+    expect(announcementFor('en').questions(3)).toContain('3 questions');
   });
 });

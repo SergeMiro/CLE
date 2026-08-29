@@ -13,7 +13,8 @@
     "test:integration": "vitest run test/integration",
     "seed:demo": "tsx src/scripts/seed-demo.ts",
     "demo:join": "tsx src/scripts/demo-join.ts",
-    "onboard": "tsx src/scripts/onboard-channel.ts"
+    "onboard": "tsx src/scripts/onboard-channel.ts",
+    "grant": "tsx src/scripts/grant-role.ts"
   },
   "dependencies": {
     "@cle/ai": "workspace:*",

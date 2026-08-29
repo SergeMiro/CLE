@@ -181,6 +181,7 @@ describe('CLE end-to-end lifecycle', () => {
     // The call to action really was posted into the channel.
     const posted = harness.telegram.state.sent.at(-1);
     expect(posted?.text).toContain('TEST YOUR KNOWLEDGE');
+    expect(posted?.text).toContain('3 questions about the post above');
     expect(posted?.replyMarkup?.inline_keyboard[0]?.[0]?.url).toContain('startapp=q_');
   });
 
