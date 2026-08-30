@@ -466,7 +466,7 @@ model Community {
   allocations     RewardAllocation[]
   referrals       Referral[]
   aiUsage         AIUsage[]
-  advertisements  Advertisement[]
+  adTargets       AdvertisementTarget[]
 
   @@index([organizationId, status])
 }
@@ -1117,14 +1117,17 @@ enum AdStatus {
 // Impressions and clicks are counters rather than an event log: billing needs the
 // totals, and one row per view of a quiz would outgrow every other table here.
 model Advertisement {
-  id          String    @id @default(uuid()) @db.Uuid
-  scope       AdScope   @default(PLATFORM)
-  communityId String?   @db.Uuid
-  sponsor     String
-  headline    String
-  body        String?
-  ctaLabel    String?
-  url         String
+  id       String  @id @default(uuid()) @db.Uuid
+  /// Who sold the slot, which is what decides priority — not where it runs.
+  scope    AdScope @default(PLATFORM)
+  sponsor  String
+  headline String
+  body     String?
+  ctaLabel String?
+  /// Creative image, served from the advertiser's own https host.
+  imageUrl String?
+  url      String
+
   status      AdStatus  @default(DRAFT)
   startsAt    DateTime?
   endsAt      DateTime?
@@ -1136,7 +1139,21 @@ model Advertisement {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  community Community? @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  targets AdvertisementTarget[]
 
-  @@index([status, scope, communityId])
+  @@index([status, scope])
+}
+
+/// Where a campaign is allowed to run. No rows at all means every community —
+/// an untargeted platform campaign is the common case and should not need a row
+/// per community to say so.
+model AdvertisementTarget {
+  advertisementId String @db.Uuid
+  communityId     String @db.Uuid
+
+  advertisement Advertisement @relation(fields: [advertisementId], references: [id], onDelete: Cascade)
+  community     Community     @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@id([advertisementId, communityId])
+  @@index([communityId])
 }

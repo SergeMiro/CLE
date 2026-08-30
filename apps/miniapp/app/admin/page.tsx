@@ -67,27 +67,44 @@ interface AdminAd {
   headline: string;
   body: string | null;
   ctaLabel: string | null;
+  imageUrl: string | null;
   url: string;
   status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ENDED';
   weight: number;
   impressions: number;
   clicks: number;
-  community: { name: string; slug: string } | null;
+  /** Empty means the campaign runs in every community. */
+  targets: { community: { id: string; name: string } }[];
+}
+
+interface AdminCommunity {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  memberCount: number;
+  organization: { name: string };
 }
 
 type Tab = 'overview' | 'withdrawals' | 'organizations' | 'ads' | 'ai';
 
 const AD_PILL: Record<string, string> = { ACTIVE: 'ok', DRAFT: 'neutral', PAUSED: 'warn', ENDED: 'neutral' };
 
-/** Selling the strip inside a quiz: what runs, what it earned, and a way to stop it. */
+/** Selling the strip inside a quiz: what runs, where, and what it earned. */
 function AdsTab() {
   const { token } = useSession();
   const ads = useApi<AdminAd[]>('/api/v1/admin/ads');
+  const communities = useApi<AdminCommunity[]>('/api/v1/admin/communities');
   const [sponsor, setSponsor] = useState('');
   const [headline, setHeadline] = useState('');
   const [body, setBody] = useState('');
   const [ctaLabel, setCtaLabel] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [url, setUrl] = useState('');
+  const [targets, setTargets] = useState<string[]>([]);
+  const [soldByCommunity, setSoldByCommunity] = useState(false);
+  const [editing, setEditing] = useState<string>();
+  const [editTargets, setEditTargets] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -104,16 +121,37 @@ function AdsTab() {
     }
   }
 
+  /** No community selected means everywhere, so "Every community" is the empty list. */
+  function Picker({ selected, onChange }: { selected: string[]; onChange: (next: string[]) => void }) {
+    return (
+      <div className="picker">
+        <button type="button" className={selected.length === 0 ? 'on' : ''} onClick={() => onChange([])}>
+          Every community
+        </button>
+        {communities.data?.map((community) => (
+          <button
+            key={community.id}
+            type="button"
+            className={selected.includes(community.id) ? 'on' : ''}
+            onClick={() =>
+              onChange(selected.includes(community.id) ? selected.filter((id) => id !== community.id) : [...selected, community.id])
+            }
+          >
+            {community.name}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <>
       {error ? <ErrorNotice message={error} /> : null}
 
       <div className="card">
         <h2>Sell a slot</h2>
-        <p className="muted small mb">
-          One strip is shown inside every quiz, between the header and the answers. A community&apos;s own sponsor always wins
-          over a platform one.
-        </p>
+        <p className="muted small mb">One strip runs inside a quiz, between the header and the answers.</p>
+
         <label className="field" htmlFor="ad-sponsor">
           Sponsor
         </label>
@@ -130,10 +168,51 @@ function AdsTab() {
           Button label (optional)
         </label>
         <input id="ad-cta" className="input" value={ctaLabel} onChange={(event) => setCtaLabel(event.target.value)} />
+        <label className="field" htmlFor="ad-image">
+          Image link (optional, https)
+        </label>
+        <input
+          id="ad-image"
+          className="input"
+          placeholder="https://…/logo.png"
+          value={imageUrl}
+          onChange={(event) => setImageUrl(event.target.value)}
+        />
+        {imageUrl.startsWith('https://') ? (
+          <div className="copyable mb">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="ad-image" src={imageUrl} alt="" width={46} height={46} />
+            <span className="small muted">Preview — a square logo reads best.</span>
+          </div>
+        ) : null}
         <label className="field" htmlFor="ad-url">
-          Link
+          Link (https)
         </label>
         <input id="ad-url" className="input" placeholder="https://" value={url} onChange={(event) => setUrl(event.target.value)} />
+
+        <div className="field">Where it runs</div>
+        <Picker
+          selected={targets}
+          onChange={(next) => {
+            setTargets(next);
+            // Priority only means something against a named community.
+            if (next.length === 0) setSoldByCommunity(false);
+          }}
+        />
+
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={soldByCommunity}
+            disabled={targets.length === 0}
+            onChange={(event) => setSoldByCommunity(event.target.checked)}
+          />
+          <span>
+            <b>Sold by the community</b>
+            Takes priority over CLE&apos;s own campaigns there. Needs at least one community.
+          </span>
+        </label>
+
         <button
           type="button"
           className="btn"
@@ -143,11 +222,13 @@ function AdsTab() {
               await api.post(
                 '/api/v1/admin/ads',
                 {
-                  scope: 'PLATFORM',
+                  scope: soldByCommunity ? 'COMMUNITY' : 'PLATFORM',
+                  communityIds: targets,
                   sponsor: sponsor.trim(),
                   headline: headline.trim(),
                   ...(body.trim() ? { body: body.trim() } : {}),
                   ...(ctaLabel.trim() ? { ctaLabel: ctaLabel.trim() } : {}),
+                  ...(imageUrl.trim() ? { imageUrl: imageUrl.trim() } : {}),
                   url: url.trim(),
                   status: 'ACTIVE',
                 },
@@ -157,7 +238,10 @@ function AdsTab() {
               setHeadline('');
               setBody('');
               setCtaLabel('');
+              setImageUrl('');
               setUrl('');
+              setTargets([]);
+              setSoldByCommunity(false);
             })
           }
         >
@@ -170,14 +254,23 @@ function AdsTab() {
       {ads.data?.map((ad) => (
         <div className="card tight" key={ad.id}>
           <div className="spread mb">
-            <div style={{ minWidth: 0 }}>
-              <div className="primary truncate">{ad.headline}</div>
-              <div className="secondary muted truncate">
-                {ad.sponsor} · {ad.community ? ad.community.name : 'every community'}
+            <div className="with-badge">
+              {ad.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="ad-image" src={ad.imageUrl} alt="" width={46} height={46} />
+              ) : null}
+              <div>
+                <div className="primary truncate">{ad.headline}</div>
+                <div className="secondary truncate">
+                  {ad.sponsor} ·{' '}
+                  {ad.targets.length === 0 ? 'every community' : ad.targets.map((target) => target.community.name).join(', ')}
+                  {ad.scope === 'COMMUNITY' ? ' · priority' : ''}
+                </div>
               </div>
             </div>
             <span className={`pill ${AD_PILL[ad.status] ?? 'neutral'}`}>{ad.status}</span>
           </div>
+
           <div className="facts">
             <div>
               <div className="value">{ad.impressions}</div>
@@ -192,21 +285,59 @@ function AdsTab() {
               <div className="label">CTR</div>
             </div>
           </div>
-          <div className="stack mt">
-            <button
-              type="button"
-              className="btn secondary small"
-              style={{ width: '100%' }}
-              disabled={busy}
-              onClick={() =>
-                run(() =>
-                  api.post(`/api/v1/admin/ads/${ad.id}/status`, { status: ad.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' }, token),
-                )
-              }
-            >
-              {ad.status === 'ACTIVE' ? 'Pause' : 'Run'}
-            </button>
-          </div>
+
+          {editing === ad.id ? (
+            <div className="mt">
+              <div className="field">Where it runs</div>
+              <Picker selected={editTargets} onChange={setEditTargets} />
+              <div className="grid-2">
+                <button
+                  type="button"
+                  className="btn small"
+                  style={{ width: '100%' }}
+                  disabled={busy}
+                  onClick={() =>
+                    run(async () => {
+                      await api.post(`/api/v1/admin/ads/${ad.id}/targets`, { communityIds: editTargets }, token);
+                      setEditing(undefined);
+                    })
+                  }
+                >
+                  Save targeting
+                </button>
+                <button type="button" className="btn secondary small" style={{ width: '100%' }} onClick={() => setEditing(undefined)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid-2 mt">
+              <button
+                type="button"
+                className="btn secondary small"
+                style={{ width: '100%' }}
+                disabled={busy}
+                onClick={() =>
+                  run(() =>
+                    api.post(`/api/v1/admin/ads/${ad.id}/status`, { status: ad.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' }, token),
+                  )
+                }
+              >
+                {ad.status === 'ACTIVE' ? 'Pause' : 'Run'}
+              </button>
+              <button
+                type="button"
+                className="btn secondary small"
+                style={{ width: '100%' }}
+                onClick={() => {
+                  setEditing(ad.id);
+                  setEditTargets(ad.targets.map((target) => target.community.id));
+                }}
+              >
+                Retarget
+              </button>
+            </div>
+          )}
         </div>
       ))}
     </>

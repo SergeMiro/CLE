@@ -8,6 +8,7 @@ export interface PublicAd {
   headline: string;
   body: string | null;
   ctaLabel: string | null;
+  imageUrl: string | null;
   url: string;
 }
 
@@ -18,28 +19,31 @@ function toPublic(ad: Advertisement): PublicAd {
     headline: ad.headline,
     body: ad.body,
     ctaLabel: ad.ctaLabel,
+    imageUrl: ad.imageUrl,
     url: ad.url,
   };
 }
 
 /**
- * Picks the ad to show beside a quiz. A community's own sponsor always wins
- * over a platform-wide one — a creator who sold their own slot must not have it
- * taken by CLE — and within the same scope the choice is weighted, so a
- * campaign bought at twice the weight is served twice as often.
+ * Picks the ad to show beside a quiz.
+ *
+ * Targeting and priority are separate questions. `targets` decides *where* a
+ * campaign may run — no rows means everywhere, which is the ordinary case for a
+ * platform campaign and should not need a row per community to express.
+ * `scope` decides *who sold it*: a community's own sponsor always wins over a
+ * platform-wide one, because a creator who sold their slot must not have it
+ * taken by CLE. Within one scope the choice is weighted, so a campaign bought
+ * at twice the weight is served twice as often.
  */
 export async function adForCommunity(ctx: AppContext, communityId: string): Promise<PublicAd | undefined> {
   const now = ctx.now();
   const eligible = await ctx.prisma.advertisement.findMany({
     where: {
       status: 'ACTIVE',
-      OR: [
-        { scope: 'COMMUNITY', communityId },
-        { scope: 'PLATFORM' },
-      ],
       AND: [
         { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
         { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
+        { OR: [{ targets: { none: {} } }, { targets: { some: { communityId } } }] },
       ],
     },
   });

@@ -709,6 +709,39 @@ a.row:active { opacity: 0.55; }
 .ring small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-top: 3px; }
 @keyframes ring-in { from { transform: rotate(-24deg) scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
 
+/* A set of toggles for picking communities: the same pill vocabulary as .tabs,
+   but each one is independently on or off. */
+.picker { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.picker button {
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--muted);
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: all 0.16s var(--ease);
+}
+.picker button.on {
+  background: var(--brand-soft);
+  border-color: color-mix(in srgb, var(--brand) 40%, transparent);
+  color: color-mix(in srgb, var(--brand) 74%, var(--text));
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.check input { margin: 2px 0 0; accent-color: var(--brand); width: 16px; height: 16px; flex: none; }
+.check span { color: var(--muted); }
+.check b { display: block; color: var(--text); font-weight: 600; }
+
 /* ── Sponsored slot ─────────────────────────────────────────────────── */
 
 /*
@@ -751,6 +784,16 @@ a.row:active { opacity: 0.55; }
   letter-spacing: 0.16em;
   text-transform: uppercase;
   line-height: 1;
+}
+
+.ad-image {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--card-2);
+  border: 1px solid var(--line-soft);
 }
 
 .ad-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
