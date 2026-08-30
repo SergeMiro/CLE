@@ -83,23 +83,79 @@ export function openLink(url: string): void {
   else if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener');
 }
 
+/** Parses the `#rgb`, `#rrggbb` and `rgb()` forms Telegram clients hand out. */
+function parseColor(value: string): [number, number, number] | undefined {
+  const input = value.trim();
+  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(input);
+  if (short) return [short[1]!, short[2]!, short[3]!].map((part) => Number.parseInt(part + part, 16)) as [number, number, number];
+  const long = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(input);
+  if (long) return [long[1]!, long[2]!, long[3]!].map((part) => Number.parseInt(part, 16)) as [number, number, number];
+  const rgb = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i.exec(input);
+  if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+  return undefined;
+}
+
+/** Perceived lightness, only ever used to compare two greys against each other. */
+function lightness(value: string): number | undefined {
+  const rgb = parseColor(value);
+  if (!rgb) return undefined;
+  const [r, g, b] = rgb;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
 /**
  * Telegram decides light or dark per client, which is not always what the OS
  * says, so `prefers-color-scheme` alone gets it wrong inside the app. The
  * scheme is mirrored onto <html data-theme> and the client chrome is painted
  * with the same grey as the page, so the Mini App has no visible seam.
+ *
+ * Which of Telegram's two greys is the page and which is the card cannot be
+ * fixed in the stylesheet: on iOS and Android dark, `secondary_bg_color` is the
+ * darker one, while on Desktop's Night theme it is the lighter one. Assigning
+ * them statically sinks every card on one of those clients. So the two are
+ * compared at runtime — the page always takes the darker grey and the cards the
+ * lighter one, which is a raised card in every theme.
  */
 export function syncColorScheme(): () => void {
   if (typeof document === 'undefined') return () => {};
   const app = webApp();
+  const root = document.documentElement;
 
   const apply = () => {
     const scheme = app?.colorScheme ?? (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.dataset.theme = scheme;
+    root.dataset.theme = scheme;
+
+    const computed = getComputedStyle(root);
+    const bg = computed.getPropertyValue('--tg-theme-bg-color').trim();
+    const alt = computed.getPropertyValue('--tg-theme-secondary-bg-color').trim();
+    const bgLight = lightness(bg);
+    const altLight = lightness(alt);
+
+    if (bgLight !== undefined && altLight !== undefined) {
+      const [page, card] = bgLight <= altLight ? [bg, alt] : [alt, bg];
+      if (Math.abs(bgLight - altLight) >= 0.012) {
+        root.style.setProperty('--page', page);
+        root.style.setProperty('--card', card);
+      } else if (altLight > 0.85) {
+        // A client that gives the same colour twice leaves nothing to separate
+        // a card from the page. On an already-white surface the card cannot go
+        // lighter, so the page goes darker instead.
+        root.style.setProperty('--page', `color-mix(in srgb, ${page} 96%, ${'#000'})`);
+        root.style.setProperty('--card', card);
+      } else {
+        root.style.setProperty('--page', page);
+        root.style.setProperty('--card', `color-mix(in srgb, ${card} 93%, #fff)`);
+      }
+    } else {
+      // Outside Telegram the stylesheet's own palette is the right answer.
+      root.style.removeProperty('--page');
+      root.style.removeProperty('--card');
+    }
+
     // Painting the client chrome only makes sense inside Telegram, and only
     // from 6.9 — older clients answer with a console warning instead.
     if (!app?.initData || !app.isVersionAtLeast?.('6.9')) return;
-    const page = getComputedStyle(document.documentElement).getPropertyValue('--page').trim();
+    const page = getComputedStyle(root).getPropertyValue('--page').trim();
     // Only a #rrggbb value is accepted; a var() or color-mix() result is not.
     if (/^#[0-9a-f]{6}$/i.test(page)) {
       app.setHeaderColor?.(page);

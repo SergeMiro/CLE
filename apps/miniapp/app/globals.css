@@ -17,12 +17,20 @@
 
   --page: var(--tg-alt);
   --card: var(--tg-bg);
-  --card-2: color-mix(in srgb, var(--tg-bg) 92%, var(--tg-alt));
+  /* Inset surfaces (fields, quiz options) follow whatever --card ended up
+     being, so they stay correct when the two greys are swapped at runtime. */
+  --card-2: color-mix(in srgb, var(--card) 92%, var(--page));
   --text: var(--tg-theme-text-color, #0d1220);
-  --muted: var(--tg-theme-hint-color, #6b7686);
-  --faint: color-mix(in srgb, var(--muted) 55%, transparent);
-  --line: color-mix(in srgb, var(--muted) 18%, transparent);
-  --line-soft: color-mix(in srgb, var(--muted) 11%, transparent);
+  /* Telegram's hint colour is tuned for its own chat list and lands at 2.9:1 on
+     white in the iOS light theme — too weak for the 12–13px secondary lines
+     here. Pulling it a fifth of the way towards the text colour raises every
+     theme past 4.5:1 while keeping it a hint. Borders stay on the raw value so
+     they do not thicken. */
+  --hint: var(--tg-theme-hint-color, #6b7686);
+  --muted: color-mix(in srgb, var(--hint) 76%, var(--text));
+  --faint: color-mix(in srgb, var(--hint) 55%, transparent);
+  --line: color-mix(in srgb, var(--hint) 18%, transparent);
+  --line-soft: color-mix(in srgb, var(--hint) 11%, transparent);
 
   /* Brand: violet → royal blue → TON cyan. Readable on both themes. */
   --brand: #4f6ef7;
@@ -32,9 +40,11 @@
   --brand-soft: color-mix(in srgb, var(--brand) 12%, transparent);
   --on-brand: #ffffff;
 
-  --positive: #12a06a;
-  --warning: #c9820b;
-  --danger: #dc4438;
+  /* Dark enough that an 11px bold pill label still clears 4.5:1 on its own
+     tinted wash; the dark theme lifts them again below. */
+  --positive: #0b7a52;
+  --warning: #8a5d00;
+  --danger: #c22b1f;
   --link: var(--tg-theme-link-color, var(--brand));
 
   --r-lg: 20px;
@@ -65,9 +75,8 @@
     --tg-bg: var(--tg-theme-bg-color, #1c1d22);
     --tg-alt: var(--tg-theme-secondary-bg-color, #131418);
     --text: var(--tg-theme-text-color, #f2f4f8);
-    --muted: var(--tg-theme-hint-color, #8d95a3);
-    --card-2: color-mix(in srgb, var(--tg-bg) 88%, #ffffff);
-    --line: color-mix(in srgb, var(--muted) 26%, transparent);
+    --hint: var(--tg-theme-hint-color, #8d95a3);
+    --line: color-mix(in srgb, var(--hint) 26%, transparent);
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.32);
     --shadow-2: 0 12px 30px -14px rgba(0, 0, 0, 0.7);
     --positive: #2fc98d;
@@ -80,9 +89,8 @@
   --tg-bg: var(--tg-theme-bg-color, #1c1d22);
   --tg-alt: var(--tg-theme-secondary-bg-color, #131418);
   --text: var(--tg-theme-text-color, #f2f4f8);
-  --muted: var(--tg-theme-hint-color, #8d95a3);
-  --card-2: color-mix(in srgb, var(--tg-bg) 88%, #ffffff);
-  --line: color-mix(in srgb, var(--muted) 26%, transparent);
+  --hint: var(--tg-theme-hint-color, #8d95a3);
+  --line: color-mix(in srgb, var(--hint) 26%, transparent);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.32);
   --shadow-2: 0 12px 30px -14px rgba(0, 0, 0, 0.7);
   --positive: #2fc98d;
@@ -546,7 +554,9 @@ a.row:active { opacity: 0.55; }
   gap: 2px;
   padding: 7px 6px;
   border-radius: 22px;
-  background: color-mix(in srgb, var(--card) 82%, transparent);
+  /* Opaque enough that the 10px labels keep their contrast when the bar floats
+     over the bare page — at 82% the dark themes dropped to 3:1. */
+  background: color-mix(in srgb, var(--card) 92%, transparent);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   border: 1px solid var(--line-soft);
@@ -566,7 +576,9 @@ a.row:active { opacity: 0.55; }
   transition: color 0.18s var(--ease), background 0.18s var(--ease);
 }
 .nav a svg { width: 21px; height: 21px; }
-.nav a.active { color: var(--brand); background: var(--brand-soft); }
+/* The brand blue alone is only ~3.3:1 on a dark bar; pulling it towards the
+   text colour keeps the hue and clears 4.5:1 in both themes. */
+.nav a.active { color: color-mix(in srgb, var(--brand) 74%, var(--text)); background: var(--brand-soft); }
 .nav a:active { transform: scale(0.94); }
 
 /* ── Tabs ───────────────────────────────────────────────────────────── */
