@@ -27,6 +27,9 @@ const walletSchema = z.object({
       payload: z.string().min(1).max(256),
       publicKeyHex: z.string().regex(/^[0-9a-fA-F]{64}$/),
       address: z.string().min(10).max(80),
+      // TON Connect returns it beside the address; it is what proves the two
+      // belong to the key that signed.
+      walletStateInit: z.string().min(1).max(8192),
     })
     .optional(),
 });

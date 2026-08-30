@@ -1,4 +1,5 @@
 import { createHash, createPublicKey, randomBytes, verify as verifySignature } from 'node:crypto';
+import { Cell } from '@ton/core';
 import { type TonAddress, parseTonAddress } from './address.js';
 
 export class TonProofError extends Error {}
@@ -18,6 +19,13 @@ export interface TonProof {
   /** Wallet's raw ed25519 public key, hex, 32 bytes. */
   publicKeyHex: string;
   address: string;
+  /**
+   * The wallet's state init, base64, exactly as TON Connect returns it beside
+   * the address. It is what ties the signature to the address: without it a
+   * signature proves only that someone owns *a* key, not that the key owns the
+   * account the rewards would be paid to.
+   */
+  walletStateInit: string;
 }
 
 export interface VerifyTonProofOptions {
@@ -105,5 +113,54 @@ export function verifyTonProof(options: VerifyTonProofOptions): VerifiedTonProof
   if (!verifySignature(null, digest, ed25519PublicKey(proof.publicKeyHex), signature)) {
     throw new TonProofError('ton_proof signature is invalid');
   }
+  assertKeyOwnsAddress(proof, address);
   return { address, publicKeyHex: proof.publicKeyHex, verifiedAt: now };
+}
+
+/**
+ * A signature on its own says nothing about the address it was sent with: a
+ * throw-away key can sign our nonce and name any account in the world. The
+ * state init closes that gap. An account's address *is* the hash of its state
+ * init, so hashing what the wallet sent and comparing it to the claimed
+ * address proves the two belong together; finding the signing key inside that
+ * state init proves the key is the one that account answers to.
+ */
+function assertKeyOwnsAddress(proof: TonProof, address: TonAddress): void {
+  if (!proof.walletStateInit) throw new TonProofError('ton_proof must carry the wallet state init');
+  let stateInit: Cell;
+  try {
+    stateInit = Cell.fromBase64(proof.walletStateInit);
+  } catch {
+    throw new TonProofError('the wallet state init is not a valid cell');
+  }
+  if (stateInit.hash().toString('hex') !== address.hash) {
+    throw new TonProofError('the ton_proof address is not the account this state init describes');
+  }
+  if (!carriesKey(stateInit, bitsOfKey(proof.publicKeyHex))) {
+    throw new TonProofError('the ton_proof address does not belong to the key that signed it');
+  }
+}
+
+function bitsOfKey(publicKeyHex: string): number[] {
+  const key = Buffer.from(publicKeyHex, 'hex');
+  const bits: number[] = [];
+  for (const byte of key) for (let bit = 7; bit >= 0; bit -= 1) bits.push((byte >> bit) & 1);
+  return bits;
+}
+
+/**
+ * Looks for the key anywhere in the wallet's data, bit by bit rather than byte
+ * by byte: every wallet stores the public key, but not every wallet stores it
+ * on a byte boundary — W5 puts a flag bit in front of it.
+ */
+function carriesKey(cell: Cell, key: number[], depth = 0): boolean {
+  if (depth > 16) return false;
+  const bits: number[] = [];
+  for (let index = 0; index < cell.bits.length; index += 1) bits.push(cell.bits.at(index) ? 1 : 0);
+  for (let offset = 0; offset + key.length <= bits.length; offset += 1) {
+    let matched = true;
+    for (let index = 0; index < key.length && matched; index += 1) matched = bits[offset + index] === key[index];
+    if (matched) return true;
+  }
+  return cell.refs.some((ref) => carriesKey(ref, key, depth + 1));
 }

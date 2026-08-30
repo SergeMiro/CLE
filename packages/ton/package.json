@@ -3,13 +3,22 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
-  "dependencies": { "@cle/core": "workspace:*" },
-  "devDependencies": { "vitest": "^4.1.0" }
+  "dependencies": {
+    "@cle/core": "workspace:*",
+    "@ton/core": "^0.63.1"
+  },
+  "devDependencies": {
+    "@ton/crypto": "^3.3.0",
+    "@ton/ton": "^16.3.0",
+    "vitest": "^4.1.0"
+  }
 }

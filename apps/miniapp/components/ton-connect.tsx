@@ -99,6 +99,7 @@ export function TonConnectSection({ linkedAddress, onLinked }: Props) {
                 payload: item.proof.payload,
                 publicKeyHex: connected.account.publicKey,
                 address: connected.account.address,
+                walletStateInit: connected.account.walletStateInit,
               },
             },
             token,

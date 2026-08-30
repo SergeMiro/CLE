@@ -1,4 +1,6 @@
 import { generateKeyPairSync, sign as signMessage } from 'node:crypto';
+import { beginCell, storeStateInit } from '@ton/core';
+import { WalletContractV4, WalletContractV5R1 } from '@ton/ton';
 import { describe, expect, it } from 'vitest';
 import {
   TonProofError,
@@ -10,19 +12,29 @@ import {
   type TonProof,
 } from '../src/index.js';
 
-const address = parseTonAddress('0:83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8');
 const now = new Date('2026-08-29T12:00:00Z');
 const nonce = 'a'.repeat(64);
 
-function signedProof(overrides: Partial<TonProof> = {}): TonProof {
+/** A real wallet: the same code and data layout a phone wallet deploys. */
+function wallet(kind: 'v4' | 'w5', publicKey: Buffer) {
+  const contract = kind === 'v4' ? WalletContractV4.create({ workchain: 0, publicKey }) : WalletContractV5R1.create({ workchain: 0, publicKey });
+  return {
+    address: `0:${contract.address.hash.toString('hex')}`,
+    stateInit: beginCell().store(storeStateInit(contract.init)).endCell().toBoc().toString('base64'),
+  };
+}
+
+function signedProof(overrides: Partial<TonProof> = {}, kind: 'v4' | 'w5' = 'v4'): TonProof {
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   const raw = publicKey.export({ format: 'der', type: 'spki' }).subarray(-32);
+  const real = wallet(kind, raw);
   const base: Omit<TonProof, 'signature'> = {
     timestamp: Math.floor(now.getTime() / 1000),
     domain: { value: 'cle.example', lengthBytes: 'cle.example'.length },
     payload: nonce,
     publicKeyHex: raw.toString('hex'),
-    address: address.raw,
+    address: real.address,
+    walletStateInit: real.stateInit,
     ...overrides,
   };
   const digest = buildSignedDigest(buildProofMessage(parseTonAddress(base.address), base));
@@ -41,9 +53,34 @@ describe('createProofChallenge', () => {
 describe('verifyTonProof', () => {
   const options = { expectedNonce: nonce, allowedDomains: ['cle.example'], now };
 
-  it('accepts a correctly signed proof', () => {
-    const result = verifyTonProof({ ...options, proof: signedProof() });
-    expect(result.address.raw).toBe(address.raw);
+  it('accepts a correctly signed proof from a real wallet', () => {
+    const proof = signedProof();
+    const result = verifyTonProof({ ...options, proof });
+    expect(result.address.raw).toBe(proof.address);
+  });
+
+  it('accepts a W5 wallet, whose key does not start on a byte boundary', () => {
+    const proof = signedProof({}, 'w5');
+    expect(verifyTonProof({ ...options, proof }).address.raw).toBe(proof.address);
+  });
+
+  it('refuses a throw-away key signing for an account it does not own', () => {
+    const someoneElse = signedProof();
+    // A freshly generated key signs our nonce, for our domain, over somebody
+    // else's address — every earlier check passes, and the account is not his.
+    const stolen = signedProof({ address: someoneElse.address, walletStateInit: someoneElse.walletStateInit });
+    expect(() => verifyTonProof({ ...options, proof: stolen })).toThrow(/does not belong to the key/);
+  });
+
+  it('refuses a state init that is not the account it claims', () => {
+    const proof = signedProof();
+    const other = signedProof();
+    expect(() => verifyTonProof({ ...options, proof: { ...proof, walletStateInit: other.walletStateInit } })).toThrow(/not the account/);
+  });
+
+  it('refuses a proof with no state init at all', () => {
+    const proof = signedProof();
+    expect(() => verifyTonProof({ ...options, proof: { ...proof, walletStateInit: '' } })).toThrow(/state init/);
   });
 
   it('rejects a proof for a different nonce', () => {
