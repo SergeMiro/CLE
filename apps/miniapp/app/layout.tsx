@@ -34,6 +34,15 @@ export const metadata: Metadata = {
   description: 'Learn from the channels you follow and earn a share of what they make.',
 };
 
+/*
+ * The layout reads this deployment's settings from the environment, so the same
+ * image serves development, staging and production. Next would otherwise
+ * prerender this file at build time and bake in whatever the build container
+ * happened to have — which is nothing, leaving a live deployment claiming to be
+ * in mock mode on the wrong TON network.
+ */
+export const dynamic = 'force-dynamic';
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
