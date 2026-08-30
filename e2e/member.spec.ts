@@ -12,7 +12,7 @@ test.describe('member Mini App', () => {
     await expect(page.getByText('Learning points')).toBeVisible();
     await expect(page.getByText('Science Daily CLE').first()).toBeVisible();
     // The seeded learner really was paid out of the community share.
-    await expect(page.locator('.balance .amount')).not.toHaveText(/^0\s*TON$/);
+    await expect(page.locator('.hero .amount')).not.toHaveText(/^0\s*TON$/);
   });
 
   test('lists quizzes and refuses to reveal the answer key', async ({ page }) => {
@@ -45,17 +45,17 @@ test.describe('member Mini App', () => {
   test('walks the wallet page and refuses a withdrawal with no wallet', async ({ page }) => {
     await page.goto(`/wallet?mockUser=${LEARNER}`);
     await expect(page.getByText('TON wallet')).toBeVisible();
-    await page.getByPlaceholder('Amount in TON').fill('1');
+    await page.getByLabel('Amount in TON').fill('1');
     await expect(page.getByRole('button', { name: 'Withdraw to TON' })).toBeDisabled();
   });
 
   test('links a wallet and requests a withdrawal', async ({ page }) => {
     await page.goto(`/wallet?mockUser=${LEARNER}`);
-    await page.getByPlaceholder('TON address (UQ… or 0:…)').fill('0:83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8');
+    await page.getByLabel('TON address').fill('0:83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8');
     await page.getByRole('button', { name: /Link wallet|Replace wallet/ }).click();
     await expect(page.getByText('Wallet linked.')).toBeVisible();
 
-    await page.getByPlaceholder('Amount in TON').fill('1');
+    await page.getByLabel('Amount in TON').fill('1');
     await page.getByRole('button', { name: 'Withdraw to TON' }).click();
     await expect(page.getByText('Withdrawal requested. It is paid out once processed.')).toBeVisible();
     await expect(page.locator('.pill', { hasText: 'LOCKED' })).toBeVisible();

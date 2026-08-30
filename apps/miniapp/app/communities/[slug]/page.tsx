@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../../components/shell';
+import { CheckIcon } from '../../../components/icons';
 import { api } from '../../../lib/api';
 import { useSession } from '../../../lib/session';
 import { openLink } from '../../../lib/telegram';
@@ -32,6 +33,8 @@ function CommunityContent() {
   if (error) return <ErrorNotice message={error} />;
   if (!data) return null;
 
+  const inChannel = data.membership?.status === 'ACTIVE' || data.membership?.status === 'REJOIN_COOLDOWN';
+
   async function checkMembership() {
     if (!data) return;
     setSyncing(true);
@@ -58,24 +61,41 @@ function CommunityContent() {
     }
   }
 
-  const inChannel = data.membership?.status === 'ACTIVE' || data.membership?.status === 'REJOIN_COOLDOWN';
-
   return (
     <>
       <div className="card">
-        <h2>{data.name}</h2>
-        <p className="muted small">{data.description ?? 'A CLE community.'}</p>
-        <div className="row">
-          <div className="secondary">Channel</div>
-          <div className="value">{data.channel.username ? `@${data.channel.username}` : data.channel.title}</div>
+        <div className="with-badge mb">
+          <span className="mono-badge">{data.name.slice(0, 1).toUpperCase()}</span>
+          <div>
+            <div className="primary truncate" style={{ fontSize: 17 }}>
+              {data.name}
+            </div>
+            <div className="secondary truncate">
+              {data.channel.username ? `@${data.channel.username}` : data.channel.title}
+            </div>
+          </div>
+          {inChannel ? (
+            <span className="pill ok" style={{ marginLeft: 'auto' }}>
+              <CheckIcon width={12} height={12} /> member
+            </span>
+          ) : null}
         </div>
-        <div className="row">
-          <div className="secondary">Members</div>
-          <div className="value">{data.memberCount}</div>
-        </div>
-        <div className="row">
-          <div className="secondary">Your points</div>
-          <div className="value">{data.membership?.learningPoints ?? 0}</div>
+        <p className="muted small" style={{ margin: 0 }}>
+          {data.description ?? 'A CLE community.'}
+        </p>
+        <div className="facts">
+          <div>
+            <div className="value">{data.memberCount}</div>
+            <div className="label">Members</div>
+          </div>
+          <div>
+            <div className="value">{data.membership?.learningPoints ?? 0}</div>
+            <div className="label">Your points</div>
+          </div>
+          <div>
+            <div className="value date">{(data.membership?.status ?? 'not joined').toLowerCase().replace('_', ' ')}</div>
+            <div className="label">Membership</div>
+          </div>
         </div>
       </div>
 

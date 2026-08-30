@@ -72,13 +72,13 @@ function OverviewTab() {
 
   return (
     <>
-      <div className="card balance">
+      <section className="hero">
+        <div className="eyebrow">CLE platform treasury</div>
         <div className="amount">
           {formatTon(data.platformTreasuryNanoton)}
-          <span>TON</span>
+          <span className="unit">TON</span>
         </div>
-        <div className="caption">CLE platform treasury</div>
-      </div>
+      </section>
 
       {health.data ? (
         <div className={`notice ${health.data.balanced && health.data.negativeCustodyAccounts.length === 0 ? 'ok' : 'error'}`}>

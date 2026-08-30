@@ -59,8 +59,8 @@ function CreateOrganization({ onCreated }: { onCreated: () => void }) {
 
   return (
     <div className="card">
-      <h2>Start as a creator</h2>
-      <p className="muted small">An organization owns your channels, communities, policies and payouts.</p>
+      <h3>Start as a creator</h3>
+      <p className="muted small mb">An organization owns your channels, communities, policies and payouts.</p>
       {error ? <ErrorNotice message={error} /> : null}
       <input className="input" placeholder="Organization name" value={name} onChange={(event) => setName(event.target.value)} />
       <button
@@ -96,8 +96,8 @@ function ConnectChannel({ organizationId, onConnected }: { organizationId: strin
 
   return (
     <div className="card">
-      <h2>Connect a channel</h2>
-      <p className="muted small">
+      <h3>Connect a channel</h3>
+      <p className="muted small mb">
         Add the CLE bot to your channel as an administrator with permission to post, then paste the channel here.
       </p>
       {error ? <ErrorNotice message={error} /> : null}
@@ -161,11 +161,14 @@ function ChannelCard({ channel, onChanged }: { channel: Channel; onChanged: () =
   return (
     <div className="card">
       <div className="spread">
-        <div>
-          <div className="primary">{channel.title}</div>
-          <div className="secondary muted">
-            {channel.username ? `@${channel.username}` : 'private channel'}
-            {channel.memberCount ? ` · ${channel.memberCount} subscribers` : ''}
+        <div className="with-badge">
+          <span className="mono-badge">{channel.title.slice(0, 1).toUpperCase()}</span>
+          <div>
+            <div className="primary truncate">{channel.title}</div>
+            <div className="secondary truncate">
+              {channel.username ? `@${channel.username}` : 'private channel'}
+              {channel.memberCount ? ` · ${channel.memberCount} subscribers` : ''}
+            </div>
           </div>
         </div>
         <span className={`pill ${CHANNEL_PILL[channel.status] ?? 'neutral'}`}>{channel.status}</span>
@@ -255,13 +258,13 @@ function CreatorContent() {
 
       {overview.data ? (
         <>
-          <div className="card balance">
+          <section className="hero">
+            <div className="eyebrow">Your creator balance</div>
             <div className="amount">
               {formatTon(overview.data.creatorAvailableNanoton)}
-              <span>TON</span>
+              <span className="unit">TON</span>
             </div>
-            <div className="caption">Your creator balance</div>
-          </div>
+          </section>
           <div className="stat-row mb">
             <div className="stat">
               <div className="value">{formatTon(overview.data.grossRevenueNanoton, 2)}</div>

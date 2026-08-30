@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../../components/shell';
+import { CommunitiesIcon, SparkIcon } from '../../../components/icons';
 import { api } from '../../../lib/api';
 import { useSession } from '../../../lib/session';
 import { haptic, openLink } from '../../../lib/telegram';
@@ -37,6 +38,8 @@ interface QuizResult {
   review: { questionId: string; correctOptionId: string; selectedOptionId: string; isCorrect: boolean; explanation: string | null }[];
 }
 
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
 function QuizRunner({ quiz }: { quiz: Quiz }) {
   const { token } = useSession();
   const router = useRouter();
@@ -56,6 +59,7 @@ function QuizRunner({ quiz }: { quiz: Quiz }) {
       const outcome = await api.post<QuizResult>(`/api/v1/quizzes/${quiz.id}/submit`, { answers: payload }, token);
       setResult(outcome);
       haptic(outcome.correctCount === outcome.questionCount ? 'success' : 'light');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
       haptic('error');
@@ -70,16 +74,36 @@ function QuizRunner({ quiz }: { quiz: Quiz }) {
     <>
       {result ? (
         <div className="card center">
-          <div className="amount" style={{ fontSize: 30, fontWeight: 650 }}>
-            {result.correctCount}/{result.questionCount}
+          <div className="ring" style={{ ['--pct' as string]: (result.correctCount / result.questionCount) * 100 }}>
+            <div>
+              <b>
+                {result.correctCount}/{result.questionCount}
+              </b>
+              <small>correct</small>
+            </div>
           </div>
-          <div className="muted small">
+          <div className="pill brand" style={{ marginBottom: 6 }}>
             +{result.finalPoints} learning points
-            {result.multiplierBps > 10_000 ? ` (streak ×${(result.multiplierBps / 10_000).toFixed(2)})` : ''}
+            {result.multiplierBps > 10_000 ? ` · streak ×${(result.multiplierBps / 10_000).toFixed(2)}` : ''}
           </div>
-          <div className="muted small">{result.totalCommunityPoints} points in {quiz.communityName}</div>
+          <p className="muted small" style={{ margin: 0 }}>
+            {result.totalCommunityPoints} points in {quiz.communityName}
+          </p>
         </div>
-      ) : null}
+      ) : (
+        <div className="card tight">
+          <div className="spread" style={{ marginBottom: 9 }}>
+            <div className="primary truncate">{quiz.title}</div>
+            <span className="pill brand">{quiz.totalPoints} pts</span>
+          </div>
+          <div className="progress">
+            <span style={{ width: `${(answered / quiz.questions.length) * 100}%` }} />
+          </div>
+          <div className="secondary muted" style={{ marginTop: 7 }}>
+            {answered} of {quiz.questions.length} answered · {quiz.communityName}
+          </div>
+        </div>
+      )}
 
       {error ? <ErrorNotice message={error} /> : null}
 
@@ -88,9 +112,12 @@ function QuizRunner({ quiz }: { quiz: Quiz }) {
         return (
           <div className="card" key={question.id}>
             <h3>
-              {index + 1}. {question.prompt}
+              <span className="muted" style={{ fontWeight: 600 }}>
+                {index + 1}.{' '}
+              </span>
+              {question.prompt}
             </h3>
-            {question.options.map((option) => {
+            {question.options.map((option, optionIndex) => {
               const selected = answers[question.id] === option.id;
               let className = 'quiz-option';
               if (review) {
@@ -110,10 +137,13 @@ function QuizRunner({ quiz }: { quiz: Quiz }) {
                     setAnswers((current) => ({ ...current, [question.id]: option.id }));
                   }}
                 >
-                  {option.text}
-                  {review && option.id === review.correctOptionId && review.explanation ? (
-                    <span className="explanation">{review.explanation}</span>
-                  ) : null}
+                  <span className="key">{LETTERS[optionIndex] ?? optionIndex + 1}</span>
+                  <span className="body">
+                    {option.text}
+                    {review && option.id === review.correctOptionId && review.explanation ? (
+                      <span className="explanation">{review.explanation}</span>
+                    ) : null}
+                  </span>
                 </button>
               );
             })}
@@ -138,18 +168,19 @@ function QuizContent() {
   const params = useParams<{ quizId: string }>();
   const { data, error, loading } = useApi<Quiz>(params?.quizId ? `/api/v1/quizzes/${params.quizId}` : undefined);
 
-  if (loading && !data) return <Loading />;
+  if (loading && !data) return <Loading rows={3} />;
   if (error) return <ErrorNotice message={error} />;
   if (!data) return null;
   if (!data.canAnswer) {
     // Answering without being in the channel earns nothing, so say that before
     // the questions rather than after the submission is refused.
     return (
-      <div className="card">
-        <h2>Join {data.communityName} first</h2>
-        <p className="muted small">
-          Learning points are paid to members of the channel. Join it, then come back to this quiz.
-        </p>
+      <div className="card empty">
+        <div className="glyph">
+          <CommunitiesIcon width={26} height={26} />
+        </div>
+        <h3 style={{ marginBottom: 6 }}>Join {data.communityName} first</h3>
+        <p>Learning points are paid to members of the channel. Join it, then come back to this quiz.</p>
         {data.channelUsername ? (
           <button type="button" className="btn mt" onClick={() => openLink(`https://t.me/${data.channelUsername}`)}>
             Open the channel
@@ -161,9 +192,12 @@ function QuizContent() {
 
   if (data.attemptStatus === 'SUBMITTED') {
     return (
-      <div className="card center">
-        <h2>Already completed</h2>
-        <p className="muted small">You earned {data.earnedPoints} learning points from this quiz.</p>
+      <div className="card empty">
+        <div className="glyph">
+          <SparkIcon width={26} height={26} />
+        </div>
+        <h3 style={{ marginBottom: 6 }}>Already completed</h3>
+        <p>You earned {data.earnedPoints} learning points from this quiz.</p>
       </div>
     );
   }
@@ -173,7 +207,7 @@ function QuizContent() {
 export default function QuizPage() {
   return (
     <main className="app">
-      <PageHeader title="Quiz" subtitle="Answer from the post — every question is checked on the server" />
+      <PageHeader title="Quiz" subtitle="Questions written from the post · answers checked on the server" />
       <RequireSession>
         <QuizContent />
       </RequireSession>

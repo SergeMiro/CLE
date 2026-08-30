@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { BottomNav, Empty, ErrorNotice, Loading, PageHeader, RequireSession } from '../../components/shell';
+import { CommunitiesIcon } from '../../components/icons';
 import { formatDate } from '../../lib/format';
 import { useApi } from '../../lib/use-api';
 
@@ -35,34 +36,47 @@ function CommunitiesContent() {
   if (loading && !data) return <Loading />;
   if (error) return <ErrorNotice message={error} />;
   if (!data) return null;
-  if (data.length === 0) return <Empty>Join a channel that runs on CLE and it will show up here.</Empty>;
+  if (data.length === 0) {
+    return (
+      <Empty icon={<CommunitiesIcon width={26} height={26} />}>
+        Join a channel that runs on CLE and it will show up here.
+      </Empty>
+    );
+  }
 
   return (
     <>
       {data.map((membership) => (
         <Link key={membership.membershipId} href={`/communities/${membership.community.slug}`} className="card">
           <div className="spread">
-            <div>
-              <div className="primary">{membership.community.name}</div>
-              <div className="secondary muted">
-                {membership.community.channel.username ? `@${membership.community.channel.username}` : membership.community.channel.title}
-                {' · '}
-                {membership.community.memberCount} members
+            <div className="with-badge">
+              <span className="mono-badge">{membership.community.name.slice(0, 1).toUpperCase()}</span>
+              <div>
+                <div className="primary truncate">{membership.community.name}</div>
+                <div className="secondary truncate">
+                  {membership.community.channel.username
+                    ? `@${membership.community.channel.username}`
+                    : membership.community.channel.title}
+                  {' · '}
+                  {membership.community.memberCount} members
+                </div>
               </div>
             </div>
             <span className={`pill ${STATUS_PILL[membership.status] ?? 'neutral'}`}>{membership.status.replace('_', ' ')}</span>
           </div>
-          <div className="row mt">
-            <div className="secondary">Learning points</div>
-            <div className="value">{membership.learningPoints}</div>
-          </div>
-          <div className="row">
-            <div className="secondary">Quizzes completed</div>
-            <div className="value">{membership.quizzesCompleted}</div>
-          </div>
-          <div className="row">
-            <div className="secondary">Member since</div>
-            <div className="value">{formatDate(membership.joinedAt)}</div>
+          <div className="facts">
+            <div>
+              <div className="value">{membership.learningPoints}</div>
+              <div className="label">Points</div>
+            </div>
+            <div>
+              <div className="value">{membership.quizzesCompleted}</div>
+              <div className="label">Quizzes</div>
+            </div>
+            <div>
+              <div className="value date">{formatDate(membership.joinedAt)}</div>
+              <div className="label">Member since</div>
+            </div>
           </div>
         </Link>
       ))}

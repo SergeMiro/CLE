@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { BottomNav, Empty, ErrorNotice, Loading, PageHeader, RequireSession } from '../components/shell';
+import { BoltIcon, ChevronIcon, CommunitiesIcon } from '../components/icons';
 import { formatTon } from '../lib/format';
 import { useSession } from '../lib/session';
 import { useApi } from '../lib/use-api';
@@ -29,22 +30,27 @@ function HomeContent() {
   const { user } = useSession();
   const { data, error, loading } = useApi<Home>('/api/v1/me/home');
 
-  if (loading && !data) return <Loading />;
+  if (loading && !data) return <Loading hero rows={2} />;
   if (error) return <ErrorNotice message={error} />;
   if (!data) return null;
 
+  const pending = BigInt(data.balance.pending);
+  const locked = BigInt(data.balance.locked);
+
   return (
     <>
-      <div className="card balance">
+      <section className="hero">
+        <div className="eyebrow">Available to withdraw</div>
         <div className="amount">
           {formatTon(data.balance.available)}
-          <span>TON</span>
+          <span className="unit">TON</span>
         </div>
-        <div className="caption">Available to withdraw</div>
-        {BigInt(data.balance.pending) > 0n ? (
-          <div className="caption">{formatTon(data.balance.pending)} TON pending release</div>
-        ) : null}
-      </div>
+        <div className="chips">
+          {pending > 0n ? <span className="chip">{formatTon(pending, 2)} pending release</span> : null}
+          {locked > 0n ? <span className="chip">{formatTon(locked, 2)} locked</span> : null}
+          <span className="chip">{formatTon(data.balance.total, 2)} earned in total</span>
+        </div>
+      </section>
 
       <div className="stat-row mb">
         <div className="stat">
@@ -62,30 +68,38 @@ function HomeContent() {
       </div>
 
       {data.openQuizzes > 0 ? (
-        <Link href="/learn" className="card tight spread" style={{ display: 'flex' }}>
-          <div>
-            <div className="primary">
-              {data.openQuizzes} quiz{data.openQuizzes === 1 ? '' : 'zes'} waiting
+        <Link href="/learn" className="card tight spread">
+          <div className="with-badge">
+            <span className="mono-badge">
+              <BoltIcon width={19} height={19} />
+            </span>
+            <div>
+              <div className="primary">
+                {data.openQuizzes} quiz{data.openQuizzes === 1 ? '' : 'zes'} waiting
+              </div>
+              <div className="secondary">Answer them to earn a share of the learning pool</div>
             </div>
-            <div className="secondary muted">Answer them to earn a share of the learning pool</div>
           </div>
-          <span aria-hidden>→</span>
+          <ChevronIcon className="chevron" />
         </Link>
       ) : null}
 
-      <div className="card">
-        <h2>Your communities</h2>
-        {data.communities.length === 0 ? (
-          <p className="muted small">
-            You are not in a CLE community yet. Join a channel that runs on CLE and it will appear here.
-          </p>
-        ) : (
-          data.communities.map((community) => (
+      <div className="section-title">Your communities</div>
+      {data.communities.length === 0 ? (
+        <Empty icon={<CommunitiesIcon width={26} height={26} />}>
+          You are not in a CLE community yet. Join a channel that runs on CLE and it will appear here.
+        </Empty>
+      ) : (
+        <div className="card flush">
+          {data.communities.map((community) => (
             <Link key={community.communityId} href={`/communities/${community.communitySlug}`} className="row">
-              <div>
-                <div className="primary">{community.communityName}</div>
-                <div className="secondary">
-                  {community.learningPoints} points · {community.status.toLowerCase().replace('_', ' ')}
+              <div className="with-badge">
+                <span className="mono-badge">{community.communityName.slice(0, 1).toUpperCase()}</span>
+                <div>
+                  <div className="primary truncate">{community.communityName}</div>
+                  <div className="secondary">
+                    {community.learningPoints} points · {community.status.toLowerCase().replace('_', ' ')}
+                  </div>
                 </div>
               </div>
               <div className="value">
@@ -95,19 +109,23 @@ function HomeContent() {
                 ) : null}
               </div>
             </Link>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {user?.isCreator ? (
-        <Link href="/creator" className="btn secondary mb">
-          Creator dashboard
-        </Link>
-      ) : null}
-      {user?.isPlatformAdmin ? (
-        <Link href="/admin" className="btn secondary">
-          Platform administration
-        </Link>
+      {user?.isCreator || user?.isPlatformAdmin ? (
+        <div className="stack mt">
+          {user?.isCreator ? (
+            <Link href="/creator" className="btn secondary">
+              Creator dashboard
+            </Link>
+          ) : null}
+          {user?.isPlatformAdmin ? (
+            <Link href="/admin" className="btn secondary">
+              Platform administration
+            </Link>
+          ) : null}
+        </div>
       ) : null}
     </>
   );
@@ -115,9 +133,10 @@ function HomeContent() {
 
 export default function HomePage() {
   const { user } = useSession();
+  const greeting = user?.firstName ?? user?.username;
   return (
     <main className="app">
-      <PageHeader title="CLE" subtitle={user ? `Create, Learn & Earn · ${user.firstName ?? user.username ?? 'member'}` : 'Create, Learn & Earn'} />
+      <PageHeader title={greeting ? `Hi, ${greeting}` : 'CLE'} subtitle="Create, Learn & Earn — your share of what the channels you follow make" />
       <RequireSession>
         <HomeContent />
       </RequireSession>

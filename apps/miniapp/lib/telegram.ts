@@ -12,6 +12,11 @@ export interface TelegramWebApp {
   MainButton?: { show: () => void; hide: () => void; setText: (text: string) => void; onClick: (handler: () => void) => void };
   openTelegramLink?: (url: string) => void;
   openLink?: (url: string) => void;
+  onEvent?: (event: string, handler: () => void) => void;
+  offEvent?: (event: string, handler: () => void) => void;
+  setHeaderColor?: (color: string) => void;
+  setBackgroundColor?: (color: string) => void;
+  isVersionAtLeast?: (version: string) => boolean;
 }
 
 declare global {
@@ -76,4 +81,38 @@ export function openLink(url: string): void {
   if (url.startsWith('https://t.me/') && app?.openTelegramLink) app.openTelegramLink(url);
   else if (app?.openLink) app.openLink(url);
   else if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener');
+}
+
+/**
+ * Telegram decides light or dark per client, which is not always what the OS
+ * says, so `prefers-color-scheme` alone gets it wrong inside the app. The
+ * scheme is mirrored onto <html data-theme> and the client chrome is painted
+ * with the same grey as the page, so the Mini App has no visible seam.
+ */
+export function syncColorScheme(): () => void {
+  if (typeof document === 'undefined') return () => {};
+  const app = webApp();
+
+  const apply = () => {
+    const scheme = app?.colorScheme ?? (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.dataset.theme = scheme;
+    // Painting the client chrome only makes sense inside Telegram, and only
+    // from 6.9 — older clients answer with a console warning instead.
+    if (!app?.initData || !app.isVersionAtLeast?.('6.9')) return;
+    const page = getComputedStyle(document.documentElement).getPropertyValue('--page').trim();
+    // Only a #rrggbb value is accepted; a var() or color-mix() result is not.
+    if (/^#[0-9a-f]{6}$/i.test(page)) {
+      app.setHeaderColor?.(page);
+      app.setBackgroundColor?.(page);
+    }
+  };
+
+  apply();
+  app?.onEvent?.('themeChanged', apply);
+  const media = window.matchMedia?.('(prefers-color-scheme: dark)');
+  media?.addEventListener?.('change', apply);
+  return () => {
+    app?.offEvent?.('themeChanged', apply);
+    media?.removeEventListener?.('change', apply);
+  };
 }

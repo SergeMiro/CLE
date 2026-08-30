@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../components/shell';
+import { CheckIcon } from '../../components/icons';
 import { formatDate } from '../../lib/format';
 import { useApi } from '../../lib/use-api';
 
@@ -18,23 +19,27 @@ function CopyRow({ label, link }: { label: string; link: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="mb">
-      <div className="small muted mb">{label}</div>
-      <div className="mono mb">{link}</div>
-      <button
-        type="button"
-        className="btn secondary small"
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(link);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1600);
-          } catch {
-            setCopied(false);
-          }
-        }}
-      >
-        {copied ? 'Copied' : 'Copy link'}
-      </button>
+      <div className="field">{label}</div>
+      <div className="copyable">
+        <span className="mono">{link}</span>
+        <button
+          type="button"
+          className="btn small"
+          style={{ marginLeft: 'auto', flex: 'none' }}
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(link);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1600);
+            } catch {
+              setCopied(false);
+            }
+          }}
+        >
+          {copied ? <CheckIcon width={14} height={14} /> : null}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -57,14 +62,14 @@ function InviteContent() {
         ))}
         <CopyRow label="CLE platform invite" link={data.platformLink} />
         <div className="small muted">
-          Referral code: <span className="mono">{data.referralCode}</span>
+          Referral code <span className="mono">{data.referralCode}</span>
         </div>
       </div>
 
       <div className="card">
         <h2>People you invited</h2>
         {data.referrals.length === 0 ? (
-          <p className="muted small">Nobody yet.</p>
+          <p className="muted small" style={{ margin: 0 }}>Nobody yet.</p>
         ) : (
           data.referrals.map((referral) => (
             <div className="row" key={referral.id}>

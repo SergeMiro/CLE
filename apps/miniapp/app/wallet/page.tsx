@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../components/shell';
+import { WalletIcon } from '../../components/icons';
 import { api } from '../../lib/api';
 import { formatDate, formatTon, tonToNanoton } from '../../lib/format';
 import { useSession } from '../../lib/session';
@@ -85,17 +86,17 @@ function WalletContent() {
     }
   }
 
-  if (home.loading && !home.data) return <Loading />;
+  if (home.loading && !home.data) return <Loading hero rows={2} />;
 
   return (
     <>
-      <div className="card balance">
+      <section className="hero">
+        <div className="eyebrow">Available across every community</div>
         <div className="amount">
           {formatTon(home.data?.balance.available)}
-          <span>TON</span>
+          <span className="unit">TON</span>
         </div>
-        <div className="caption">Available across every community</div>
-      </div>
+      </section>
 
       <div className="stat-row mb">
         <div className="stat">
@@ -119,17 +120,24 @@ function WalletContent() {
         <h2>TON wallet</h2>
         {primary ? (
           <>
-            <div className="mono mb">{primary.addressFriendly}</div>
-            <div className="small muted">
+            <div className="copyable mb">
+              <WalletIcon width={18} height={18} className="muted" />
+              <span className="mono">{primary.addressFriendly}</span>
+            </div>
+            <div className="small muted mb">
               {primary.network.toLowerCase()} · linked {formatDate(primary.verifiedAt)}
             </div>
           </>
         ) : (
-          <p className="muted small">Link the wallet that should receive your rewards.</p>
+          <p className="muted small mb">Link the wallet that should receive your rewards.</p>
         )}
+        <label className="field" htmlFor="ton-address">
+          TON address
+        </label>
         <input
-          className="input mt"
-          placeholder="TON address (UQ… or 0:…)"
+          id="ton-address"
+          className="input"
+          placeholder="UQ… or 0:…"
           value={address}
           onChange={(event) => setAddress(event.target.value)}
         />
@@ -140,7 +148,17 @@ function WalletContent() {
 
       <div className="card">
         <h2>Withdraw</h2>
-        <input className="input" placeholder="Amount in TON" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
+        <label className="field" htmlFor="ton-amount">
+          Amount in TON
+        </label>
+        <input
+          id="ton-amount"
+          className="input"
+          placeholder="0.00"
+          inputMode="decimal"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+        />
         <button type="button" className="btn" disabled={busy || !primary || amount.trim() === ''} onClick={withdraw}>
           Withdraw to TON
         </button>
@@ -161,7 +179,7 @@ function WalletContent() {
             </div>
           ))
         ) : (
-          <p className="muted small">No withdrawals yet.</p>
+          <p className="muted small" style={{ margin: 0 }}>No withdrawals yet.</p>
         )}
       </div>
     </>

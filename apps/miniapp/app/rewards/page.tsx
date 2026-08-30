@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { BottomNav, Empty, ErrorNotice, Loading, PageHeader, RequireSession } from '../../components/shell';
+import { BoltIcon, CommunitiesIcon, LearnIcon, RewardsIcon } from '../../components/icons';
 import { formatDate, formatTon } from '../../lib/format';
 import { useApi } from '../../lib/use-api';
 
@@ -16,6 +17,16 @@ interface Allocation {
 }
 
 const STATUS_PILL: Record<string, string> = { AVAILABLE: 'ok', PENDING: 'warn', PAID: 'neutral', CANCELLED: 'bad' };
+/* Growth, loyalty, referral and learning each keep one colour and one glyph
+   wherever they appear — two of them start with the same letter, so an initial
+   would not tell them apart. */
+const POOL_TONE: Record<string, string> = { GROWTH: 'growth', LOYALTY: 'loyalty', REFERRAL: 'referral', LEARNING: 'learning' };
+const POOL_ICON: Record<string, typeof BoltIcon> = {
+  GROWTH: BoltIcon,
+  LOYALTY: RewardsIcon,
+  REFERRAL: CommunitiesIcon,
+  LEARNING: LearnIcon,
+};
 const FILTERS = ['all', 'AVAILABLE', 'PENDING', 'PAID'] as const;
 
 function RewardsContent() {
@@ -35,23 +46,33 @@ function RewardsContent() {
       </div>
       {loading && !data ? <Loading /> : null}
       {error ? <ErrorNotice message={error} /> : null}
-      {data && data.length === 0 ? <Empty>No rewards yet. They arrive when a community closes a revenue cycle.</Empty> : null}
-      {data?.map((allocation) => (
-        <div className="card tight" key={allocation.id}>
-          <div className="spread">
-            <div>
-              <div className="primary">{formatTon(allocation.amountNanoton)} TON</div>
-              <div className="secondary muted">
+      {data && data.length === 0 ? (
+        <Empty icon={<RewardsIcon width={26} height={26} />}>
+          No rewards yet. They arrive when a community closes a revenue cycle.
+        </Empty>
+      ) : null}
+      {data?.map((allocation) => {
+        const PoolIcon = POOL_ICON[allocation.type] ?? RewardsIcon;
+        return (
+          <div className="card tight with-badge" key={allocation.id}>
+            <span className={`mono-badge ${POOL_TONE[allocation.type] ?? ''}`}>
+              <PoolIcon width={18} height={18} />
+            </span>
+            <div style={{ flex: 1 }}>
+              <div className="spread">
+                <div className="primary">{formatTon(allocation.amountNanoton)} TON</div>
+                <span className={`pill ${STATUS_PILL[allocation.status] ?? 'neutral'}`}>{allocation.status}</span>
+              </div>
+              <div className="secondary truncate">
                 {allocation.community.name} · {allocation.type.toLowerCase()} pool
               </div>
-              <div className="secondary muted">
+              <div className="secondary truncate">
                 {formatDate(allocation.cycle.periodStart)} – {formatDate(allocation.cycle.periodEnd)}
               </div>
             </div>
-            <span className={`pill ${STATUS_PILL[allocation.status] ?? 'neutral'}`}>{allocation.status}</span>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }

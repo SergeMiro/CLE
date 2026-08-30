@@ -36,18 +36,27 @@ function ProfileContent() {
 
   const level = levelFor(data.learningPoints);
   const next = LEVELS.find((candidate) => candidate.minPoints > data.learningPoints);
+  // How far along the current band the person is, so the bar means something
+  // rather than filling from zero at every level.
+  const progress = next
+    ? Math.min(100, ((data.learningPoints - level.minPoints) / (next.minPoints - level.minPoints)) * 100)
+    : 100;
 
   return (
     <>
-      <div className="card center">
-        <div className="amount" style={{ fontSize: 26, fontWeight: 650 }}>
+      <section className="hero">
+        <div className="eyebrow">Learning level</div>
+        <div className="amount">
           {level.key}
+          <span className="unit">{data.learningPoints} pts</span>
         </div>
-        <div className="muted small">
-          {data.learningPoints} learning points
-          {next ? ` · ${next.minPoints - data.learningPoints} to ${next.key}` : ' · top level'}
+        <div className="level-track">
+          <span style={{ width: `${progress}%` }} />
         </div>
-      </div>
+        <div className="level-caption">
+          {next ? `${next.minPoints - data.learningPoints} points to ${next.key}` : 'Top level reached'}
+        </div>
+      </section>
 
       <div className="stat-row mb">
         <div className="stat">

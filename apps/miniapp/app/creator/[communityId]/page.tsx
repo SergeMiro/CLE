@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../../components/shell';
+import { Slider } from '../../../components/slider';
 import { api } from '../../../lib/api';
 import { formatDate, formatTon, tonToNanoton } from '../../../lib/format';
 import { useSession } from '../../../lib/session';
@@ -432,6 +433,14 @@ function RevenueTab({ communityId }: { communityId: string }) {
   );
 }
 
+/** The four reward pools, named the way a creator reads them. */
+const POOL_LABEL = {
+  growthBps: 'Growth',
+  loyaltyBps: 'Loyalty',
+  referralBps: 'Referral',
+  learningBps: 'Learning',
+} as const;
+
 function SettingsTab({ communityId }: { communityId: string }) {
   const { token } = useSession();
   const policies = useApi<Policies>(`/api/v1/communities/${communityId}/policies`);
@@ -465,27 +474,37 @@ function SettingsTab({ communityId }: { communityId: string }) {
           CLE takes {data.platform.platformFeeBps / 100}% of gross. You may take up to {maxShare / 100}% of what remains; the rest
           goes to the community.
         </p>
-        <label className="small muted">Your share of the remainder: {(share / 100).toFixed(2)}%</label>
-        <input
-          className="input"
-          type="range"
-          min={0}
+        <Slider
+          label="Your share of the remainder"
+          hint={`${(share / 100).toFixed(2)}%`}
           max={maxShare}
           step={25}
           value={share}
-          onChange={(event) => setCreatorShare(Number(event.target.value))}
+          onChange={setCreatorShare}
         />
-        <div className="row">
-          <div className="secondary">On 100 TON of revenue</div>
-          <div className="value">
-            {(() => {
-              const fee = data.platform.platformFeeBps / 100;
-              const net = 100 - fee;
-              const creator = (net * share) / 10_000;
-              return `CLE ${fee.toFixed(1)} · you ${creator.toFixed(2)} · community ${(net - creator).toFixed(2)}`;
-            })()}
-          </div>
-        </div>
+        {(() => {
+          // The same split the ledger will make, shown on a round number so the
+          // slider means something before it is saved.
+          const fee = data.platform.platformFeeBps / 100;
+          const net = 100 - fee;
+          const creator = (net * share) / 10_000;
+          return (
+            <div className="split-preview mb">
+              <div>
+                <div className="value">{fee.toFixed(1)}</div>
+                <div className="label">CLE fee</div>
+              </div>
+              <div>
+                <div className="value">{creator.toFixed(2)}</div>
+                <div className="label">You</div>
+              </div>
+              <div>
+                <div className="value">{(net - creator).toFixed(2)}</div>
+                <div className="label">Community</div>
+              </div>
+            </div>
+          );
+        })()}
         <button
           type="button"
           className="btn"
@@ -506,20 +525,15 @@ function SettingsTab({ communityId }: { communityId: string }) {
         <h2>Reward pools</h2>
         <p className="muted small">How the community share is divided. The four pools must total 100%.</p>
         {(['growthBps', 'loyaltyBps', 'referralBps', 'learningBps'] as const).map((key) => (
-          <div key={key}>
-            <label className="small muted">
-              {key.replace('Bps', '')}: {(currentPools[key] / 100).toFixed(0)}%
-            </label>
-            <input
-              className="input"
-              type="range"
-              min={0}
-              max={10_000}
-              step={250}
-              value={currentPools[key]}
-              onChange={(event) => setPools({ ...currentPools, [key]: Number(event.target.value) })}
-            />
-          </div>
+          <Slider
+            key={key}
+            label={POOL_LABEL[key]}
+            hint={`${(currentPools[key] / 100).toFixed(0)}%`}
+            max={10_000}
+            step={250}
+            value={currentPools[key]}
+            onChange={(next) => setPools({ ...currentPools, [key]: next })}
+          />
         ))}
         <div className={`notice ${poolTotal === 10_000 ? 'ok' : 'error'}`}>Total: {(poolTotal / 100).toFixed(0)}%</div>
         <button
