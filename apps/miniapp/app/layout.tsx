@@ -4,6 +4,7 @@ import Script from 'next/script';
 import type { ReactNode } from 'react';
 import { StartPayloadRouter } from '../components/start-payload-router';
 import { ThemeSync } from '../components/theme-sync';
+import { MoneyUnitProvider } from '../lib/money-unit';
 import { SessionProvider } from '../lib/session';
 import './globals.css';
 
@@ -76,9 +77,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Telegram injects window.Telegram.WebApp; the app also runs in a plain browser for development. */}
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         <SessionProvider>
-          <ThemeSync />
-          <StartPayloadRouter />
-          {children}
+          <MoneyUnitProvider>
+            <ThemeSync />
+            <StartPayloadRouter />
+            {children}
+          </MoneyUnitProvider>
         </SessionProvider>
       </body>
     </html>

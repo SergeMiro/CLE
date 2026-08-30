@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { BottomNav, Empty, ErrorNotice, Loading, PageHeader, RequireSession } from '../components/shell';
 import { BoltIcon, ChevronIcon, CommunitiesIcon } from '../components/icons';
-import { formatTon } from '../lib/format';
+import { Money, MoneyHero } from '../components/money';
 import { useSession } from '../lib/session';
 import { useApi } from '../lib/use-api';
 
@@ -40,15 +40,11 @@ function HomeContent() {
   return (
     <>
       <section className="hero">
-        <div className="eyebrow">Available to withdraw</div>
-        <div className="amount">
-          {formatTon(data.balance.available)}
-          <span className="unit">TON</span>
-        </div>
+        <MoneyHero nanoton={data.balance.available} eyebrow="Available to withdraw" />
         <div className="chips">
-          {pending > 0n ? <span className="chip">{formatTon(pending, 2)} pending release</span> : null}
-          {locked > 0n ? <span className="chip">{formatTon(locked, 2)} locked</span> : null}
-          <span className="chip">{formatTon(data.balance.total, 2)} earned in total</span>
+          {pending > 0n ? <span className="chip"><Money nanoton={pending} tonFractionDigits={2} /> pending release</span> : null}
+          {locked > 0n ? <span className="chip"><Money nanoton={locked} tonFractionDigits={2} /> locked</span> : null}
+          <span className="chip"><Money nanoton={data.balance.total} tonFractionDigits={2} /> earned in total</span>
         </div>
       </section>
 
@@ -103,9 +99,9 @@ function HomeContent() {
                 </div>
               </div>
               <div className="value">
-                <div>{formatTon(community.availableNanoton)} TON</div>
+                <div><Money nanoton={community.availableNanoton} /></div>
                 {BigInt(community.pendingNanoton) > 0n ? (
-                  <div className="secondary">+{formatTon(community.pendingNanoton)} pending</div>
+                  <div className="secondary">+<Money nanoton={community.pendingNanoton} withUnit={false} /> pending</div>
                 ) : null}
               </div>
             </Link>

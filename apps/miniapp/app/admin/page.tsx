@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../components/shell';
 import { api } from '../../lib/api';
+import { Money, MoneyHero } from '../../components/money';
 import { formatDate, formatTon } from '../../lib/format';
 import { useSession } from '../../lib/session';
 import { useApi } from '../../lib/use-api';
@@ -397,11 +398,7 @@ function OverviewTab() {
   return (
     <>
       <section className="hero">
-        <div className="eyebrow">CLE platform treasury</div>
-        <div className="amount">
-          {formatTon(data.platformTreasuryNanoton)}
-          <span className="unit">TON</span>
-        </div>
+        <MoneyHero nanoton={data.platformTreasuryNanoton} eyebrow="CLE platform treasury" />
       </section>
 
       {health.data ? (
@@ -423,11 +420,11 @@ function OverviewTab() {
 
       <div className="card">
         <h2>Money</h2>
-        <div className="row"><div className="secondary">Gross revenue</div><div className="value">{formatTon(data.grossRevenueNanoton)} TON</div></div>
-        <div className="row"><div className="secondary">CLE fee</div><div className="value">{formatTon(data.platformFeeNanoton)} TON</div></div>
-        <div className="row"><div className="secondary">Creator share</div><div className="value">{formatTon(data.creatorShareNanoton)} TON</div></div>
-        <div className="row"><div className="secondary">Community share</div><div className="value">{formatTon(data.communityShareNanoton)} TON</div></div>
-        <div className="row"><div className="secondary">Withdrawn</div><div className="value">{formatTon(data.withdrawalsConfirmedNanoton)} TON</div></div>
+        <div className="row"><div className="secondary">Gross revenue</div><div className="value"><Money nanoton={data.grossRevenueNanoton} /></div></div>
+        <div className="row"><div className="secondary">CLE fee</div><div className="value"><Money nanoton={data.platformFeeNanoton} /></div></div>
+        <div className="row"><div className="secondary">Creator share</div><div className="value"><Money nanoton={data.creatorShareNanoton} /></div></div>
+        <div className="row"><div className="secondary">Community share</div><div className="value"><Money nanoton={data.communityShareNanoton} /></div></div>
+        <div className="row"><div className="secondary">Withdrawn</div><div className="value"><Money nanoton={data.withdrawalsConfirmedNanoton} /></div></div>
       </div>
 
       <div className="card">
@@ -458,7 +455,7 @@ function WithdrawalsTab() {
         <div className="card" key={withdrawal.id}>
           <div className="spread">
             <div>
-              <div className="primary">{formatTon(withdrawal.amountNanoton)} TON</div>
+              <div className="primary"><Money nanoton={withdrawal.amountNanoton} /></div>
               <div className="secondary muted">
                 {withdrawal.organization?.name ??
                   (withdrawal.user?.telegramUsername ? `@${withdrawal.user.telegramUsername}` : withdrawal.user?.telegramId)}

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../components/shell';
-import { formatTon } from '../../lib/format';
+import { Money } from '../../components/money';
+import { useMoneyUnit } from '../../lib/money-unit';
 import { useSession } from '../../lib/session';
 import { useApi } from '../../lib/use-api';
 
@@ -29,6 +30,7 @@ function levelFor(points: number) {
 
 function ProfileContent() {
   const { user, signOut } = useSession();
+  const { unit, setUnit } = useMoneyUnit();
   const { data, error, loading } = useApi<Home>('/api/v1/me/home');
   if (loading && !data) return <Loading />;
   if (error) return <ErrorNotice message={error} />;
@@ -68,8 +70,8 @@ function ProfileContent() {
           <div className="label">Communities</div>
         </div>
         <div className="stat">
-          <div className="value">{formatTon(data.balance.total, 2)}</div>
-          <div className="label">TON earned</div>
+          <div className="value"><Money nanoton={data.balance.total} tonFractionDigits={2} withUnit={false} /></div>
+          <div className="label">{unit} earned</div>
         </div>
       </div>
 
@@ -86,6 +88,25 @@ function ProfileContent() {
         <div className="row">
           <div className="secondary">Role</div>
           <div className="value">{user.isPlatformAdmin ? 'Platform admin' : user.isCreator ? 'Creator' : 'Learner'}</div>
+        </div>
+        <div className="row">
+          <div>
+            <div className="secondary">Balances shown in</div>
+            <div className="secondary muted small">1 000 CLEP = 1 TON, always</div>
+          </div>
+          <div className="segmented">
+            {(['CLEP', 'TON'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={option === unit ? 'active' : ''}
+                aria-pressed={option === unit}
+                onClick={() => setUnit(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

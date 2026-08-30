@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { BottomNav, Empty, ErrorNotice, Loading, PageHeader, RequireSession } from '../../components/shell';
 import { BoltIcon, CommunitiesIcon, LearnIcon, RewardsIcon } from '../../components/icons';
-import { formatDate, formatTon } from '../../lib/format';
+import { Money } from '../../components/money';
+import { formatDate } from '../../lib/format';
 import { useApi } from '../../lib/use-api';
 
 interface Allocation {
@@ -60,7 +61,7 @@ function RewardsContent() {
             </span>
             <div style={{ flex: 1 }}>
               <div className="spread">
-                <div className="primary">{formatTon(allocation.amountNanoton)} TON</div>
+                <div className="primary"><Money nanoton={allocation.amountNanoton} /></div>
                 <span className={`pill ${STATUS_PILL[allocation.status] ?? 'neutral'}`}>{allocation.status}</span>
               </div>
               <div className="secondary truncate">

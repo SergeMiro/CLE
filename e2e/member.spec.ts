@@ -46,8 +46,32 @@ test.describe('member Mini App', () => {
     await page.goto(`/wallet?mockUser=${LEARNER}`);
     // "Connect TON wallet" contains the same words, so target the heading itself.
     await expect(page.getByRole('heading', { name: 'TON wallet' })).toBeVisible();
-    await page.getByLabel('Amount in TON').fill('1');
+    await page.getByLabel('Amount in CLEP').fill('1000');
+    // Points are what the app counts in; TON is what leaves for the wallet.
+    await expect(page.getByText('Sends 1 TON to your wallet.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Withdraw to TON' })).toBeDisabled();
+  });
+
+  test('counts in CLE points and switches to TON on a tap', async ({ page }) => {
+    await page.goto(`/?mockUser=${LEARNER}`);
+    const hero = page.locator('.hero .amount');
+    await expect(hero).toContainText('CLEP');
+    const amount = async () => Number((await hero.innerText()).replace(/[^\d.]/g, ''));
+    const points = await amount();
+    await expect(page.locator('.amount-alt')).toContainText('TON');
+
+    await hero.click();
+    await expect(hero).toContainText('TON');
+    const ton = await amount();
+    // The same money, a thousand times over — each unit shown to its own
+    // precision, so they agree to within half a point.
+    expect(Math.abs(ton * 1000 - points)).toBeLessThanOrEqual(0.5);
+
+    // The choice survives a reload, and every other screen honours it.
+    await page.reload();
+    await expect(page.locator('.hero .amount')).toContainText('TON');
+    await page.goto(`/wallet?mockUser=${LEARNER}`);
+    await expect(page.getByLabel('Amount in TON')).toBeVisible();
   });
 
   test('links a wallet and requests a withdrawal', async ({ page }) => {
@@ -56,7 +80,7 @@ test.describe('member Mini App', () => {
     await page.getByRole('button', { name: /Link wallet|Replace wallet/ }).click();
     await expect(page.getByText('Wallet linked.')).toBeVisible();
 
-    await page.getByLabel('Amount in TON').fill('1');
+    await page.getByLabel('Amount in CLEP').fill('1000');
     await page.getByRole('button', { name: 'Withdraw to TON' }).click();
     await expect(page.getByText('Withdrawal requested. It is paid out once processed.')).toBeVisible();
     await expect(page.locator('.pill', { hasText: 'LOCKED' })).toBeVisible();

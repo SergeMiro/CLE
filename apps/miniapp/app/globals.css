@@ -266,6 +266,35 @@ a.card.spread { display: flex; }
   line-height: 1.05;
 }
 .hero .amount .unit { font-size: 15px; font-weight: 600; opacity: 0.82; letter-spacing: 0; }
+/* The headline balance is a button: tapping it swaps CLEP and TON. */
+.amount-switch {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.amount-switch:active { opacity: 0.72; }
+.hero .amount-alt {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 560;
+  opacity: 0.82;
+  font-variant-numeric: tabular-nums;
+}
+.hero .amount-alt-hint {
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.66;
+}
+.unit-suffix { font-size: 0.82em; font-weight: 600; opacity: 0.72; }
 .level-track {
   height: 7px;
   border-radius: 999px;
@@ -610,6 +639,31 @@ a.row:active { opacity: 0.55; }
   border-color: transparent;
   box-shadow: var(--shadow-brand);
 }
+
+/* A two-value choice that belongs inside a row, unlike the scrolling tabs. */
+.segmented {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--card-2);
+  border: 1px solid var(--line-soft);
+  flex: none;
+}
+.segmented button {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-head);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 6px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.16s var(--ease);
+}
+.segmented button.active { background: var(--brand-grad); color: var(--on-brand); box-shadow: var(--shadow-brand); }
 
 /* ── Quiz ───────────────────────────────────────────────────────────── */
 

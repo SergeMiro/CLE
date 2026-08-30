@@ -54,6 +54,10 @@ that run: the Mini App was serving a build-time configuration (it claimed mock
 mode on testnet in production), and a partial policy update silently reset the
 rest of a community's settings.
 
+Since that run the Mini App counts in CLE points — 1 000 CLEP to the TON, a
+display unit over the same nanoton ledger, switchable by tapping the balance and
+remembered per person.
+
 A third defect came out of the same run and is fixed here: a `ton_proof` was
 accepted without any link between the key that signed it and the address it
 named, so a freshly generated key could register somebody else's wallet as the

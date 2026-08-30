@@ -10,7 +10,8 @@ describe('formatTon', () => {
   });
 
   it('keeps precision on a value larger than Number.MAX_SAFE_INTEGER', () => {
-    expect(formatTon('9007199254740993000000000', 0)).toBe('9007199254740993');
+    // Grouped for reading, but every digit is the one that came from the ledger.
+    expect(formatTon('9007199254740993000000000', 0)).toBe('9,007,199,254,740,993');
   });
 
   it('handles a negative balance and an empty value', () => {

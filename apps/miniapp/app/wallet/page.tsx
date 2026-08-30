@@ -5,7 +5,9 @@ import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../
 import { TonConnectSection, TonWalletProvider } from '../../components/ton-connect';
 import { api } from '../../lib/api';
 import { config } from '../../lib/config';
-import { formatDate, formatTon, tonToNanoton } from '../../lib/format';
+import { Money, MoneyHero } from '../../components/money';
+import { amountToNanoton, formatDate, formatMoney, formatTon } from '../../lib/format';
+import { useMoneyUnit } from '../../lib/money-unit';
 import { useSession } from '../../lib/session';
 import { useApi } from '../../lib/use-api';
 
@@ -43,6 +45,7 @@ const STATUS_PILL: Record<string, string> = {
 
 function WalletContent() {
   const { token } = useSession();
+  const { unit } = useMoneyUnit();
   const home = useApi<Home>('/api/v1/me/home');
   const wallets = useApi<Wallet[]>('/api/v1/me/wallets');
   const withdrawals = useApi<Withdrawal[]>('/api/v1/me/withdrawals');
@@ -53,6 +56,13 @@ function WalletContent() {
   const [message, setMessage] = useState<string>();
 
   const primary = wallets.data?.find((wallet) => wallet.isPrimary);
+  // What the typed amount really is, so nobody withdraws by guessing.
+  let payout: string | undefined;
+  try {
+    payout = amount.trim() ? amountToNanoton(amount, unit) : undefined;
+  } catch {
+    payout = undefined;
+  }
 
   async function linkWallet() {
     setBusy(true);
@@ -75,7 +85,8 @@ function WalletContent() {
     setError(undefined);
     setMessage(undefined);
     try {
-      await api.post('/api/v1/me/withdrawals', { amountNanoton: tonToNanoton(amount) }, token);
+      const amountNanoton = amountToNanoton(amount, unit);
+      await api.post('/api/v1/me/withdrawals', { amountNanoton }, token);
       setAmount('');
       setMessage('Withdrawal requested. It is paid out once processed.');
       home.reload();
@@ -92,24 +103,20 @@ function WalletContent() {
   return (
     <>
       <section className="hero">
-        <div className="eyebrow">Available across every community</div>
-        <div className="amount">
-          {formatTon(home.data?.balance.available)}
-          <span className="unit">TON</span>
-        </div>
+        <MoneyHero nanoton={home.data?.balance.available} eyebrow="Available across every community" />
       </section>
 
       <div className="stat-row mb">
         <div className="stat">
-          <div className="value">{formatTon(home.data?.balance.pending, 2)}</div>
+          <div className="value"><Money nanoton={home.data?.balance.pending} tonFractionDigits={2} /></div>
           <div className="label">Pending</div>
         </div>
         <div className="stat">
-          <div className="value">{formatTon(home.data?.balance.locked, 2)}</div>
+          <div className="value"><Money nanoton={home.data?.balance.locked} tonFractionDigits={2} /></div>
           <div className="label">Locked</div>
         </div>
         <div className="stat">
-          <div className="value">{formatTon(home.data?.balance.total, 2)}</div>
+          <div className="value"><Money nanoton={home.data?.balance.total} tonFractionDigits={2} /></div>
           <div className="label">Earned</div>
         </div>
       </div>
@@ -154,16 +161,19 @@ function WalletContent() {
       <div className="card">
         <h2>Withdraw</h2>
         <label className="field" htmlFor="ton-amount">
-          Amount in TON
+          Amount in {unit}
         </label>
         <input
           id="ton-amount"
           className="input"
-          placeholder="0.00"
+          placeholder={unit === 'CLEP' ? '250' : '0.25'}
           inputMode="decimal"
           value={amount}
           onChange={(event) => setAmount(event.target.value)}
         />
+        {/* Points are how the app counts; TON is what lands in the wallet, so
+            the payout is always spelled out in it. */}
+        <p className="muted small mt">{payout ? `Sends ${formatTon(payout)} TON to your wallet.` : `A withdrawal starts at ${unit === 'CLEP' ? '100 CLEP' : '0.1 TON'}.`}</p>
         <button type="button" className="btn" disabled={busy || !primary || amount.trim() === ''} onClick={withdraw}>
           Withdraw to TON
         </button>
@@ -177,6 +187,7 @@ function WalletContent() {
             <div className="row" key={withdrawal.id}>
               <div>
                 <div className="primary">{formatTon(withdrawal.amountNanoton)} TON</div>
+                <div className="secondary muted">{formatMoney(withdrawal.amountNanoton, 'CLEP')} CLEP</div>
                 <div className="secondary muted">{formatDate(withdrawal.requestedAt)}</div>
                 {withdrawal.failureReason ? <div className="secondary muted">{withdrawal.failureReason}</div> : null}
               </div>

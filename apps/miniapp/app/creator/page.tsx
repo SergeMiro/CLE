@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../components/shell';
 import { api } from '../../lib/api';
-import { formatTon } from '../../lib/format';
+import { Money, MoneyHero } from '../../components/money';
 import { useSession } from '../../lib/session';
 import { useApi } from '../../lib/use-api';
 
@@ -259,23 +259,19 @@ function CreatorContent() {
       {overview.data ? (
         <>
           <section className="hero">
-            <div className="eyebrow">Your creator balance</div>
-            <div className="amount">
-              {formatTon(overview.data.creatorAvailableNanoton)}
-              <span className="unit">TON</span>
-            </div>
+            <MoneyHero nanoton={overview.data.creatorAvailableNanoton} eyebrow="Your creator balance" />
           </section>
           <div className="stat-row mb">
             <div className="stat">
-              <div className="value">{formatTon(overview.data.grossRevenueNanoton, 2)}</div>
+              <div className="value"><Money nanoton={overview.data.grossRevenueNanoton} tonFractionDigits={2} /></div>
               <div className="label">Gross revenue</div>
             </div>
             <div className="stat">
-              <div className="value">{formatTon(overview.data.communityShareNanoton, 2)}</div>
+              <div className="value"><Money nanoton={overview.data.communityShareNanoton} tonFractionDigits={2} /></div>
               <div className="label">To community</div>
             </div>
             <div className="stat">
-              <div className="value">{formatTon(overview.data.platformFeeNanoton, 2)}</div>
+              <div className="value"><Money nanoton={overview.data.platformFeeNanoton} tonFractionDigits={2} /></div>
               <div className="label">CLE fee</div>
             </div>
           </div>

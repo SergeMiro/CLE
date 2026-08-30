@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../../components/shell';
 import { Slider } from '../../../components/slider';
 import { api } from '../../../lib/api';
+import { Money } from '../../../components/money';
 import { formatDate, formatTon, tonToNanoton } from '../../../lib/format';
 import { useSession } from '../../../lib/session';
 import { useApi } from '../../../lib/use-api';
@@ -142,10 +143,10 @@ function OverviewTab({ communityId }: { communityId: string }) {
       </div>
       <div className="card">
         <h2>Money</h2>
-        <div className="row"><div className="secondary">Community treasury</div><div className="value">{formatTon(data.treasuryNanoton)} TON</div></div>
-        <div className="row"><div className="secondary">Distributed to members</div><div className="value">{formatTon(data.distributedNanoton)} TON</div></div>
-        <div className="row"><div className="secondary">Reward per active member</div><div className="value">{formatTon(data.rewardPerActiveMemberNanoton)} TON</div></div>
-        <div className="row"><div className="secondary">Revenue per active member</div><div className="value">{formatTon(data.revenuePerActiveMemberNanoton)} TON</div></div>
+        <div className="row"><div className="secondary">Community treasury</div><div className="value"><Money nanoton={data.treasuryNanoton} /></div></div>
+        <div className="row"><div className="secondary">Distributed to members</div><div className="value"><Money nanoton={data.distributedNanoton} /></div></div>
+        <div className="row"><div className="secondary">Reward per active member</div><div className="value"><Money nanoton={data.rewardPerActiveMemberNanoton} /></div></div>
+        <div className="row"><div className="secondary">Revenue per active member</div><div className="value"><Money nanoton={data.revenuePerActiveMemberNanoton} /></div></div>
       </div>
     </>
   );
@@ -379,10 +380,10 @@ function RevenueTab({ communityId }: { communityId: string }) {
             </div>
             <span className="pill neutral">{cycle.status}</span>
           </div>
-          <div className="row mt"><div className="secondary">Gross</div><div className="value">{formatTon(cycle.grossNanoton)} TON</div></div>
-          <div className="row"><div className="secondary">CLE fee</div><div className="value">{formatTon(cycle.platformFeeNanoton)} TON</div></div>
-          <div className="row"><div className="secondary">Your share</div><div className="value">{formatTon(cycle.creatorShareNanoton)} TON</div></div>
-          <div className="row"><div className="secondary">Community share</div><div className="value">{formatTon(cycle.communityShareNanoton)} TON</div></div>
+          <div className="row mt"><div className="secondary">Gross</div><div className="value"><Money nanoton={cycle.grossNanoton} /></div></div>
+          <div className="row"><div className="secondary">CLE fee</div><div className="value"><Money nanoton={cycle.platformFeeNanoton} /></div></div>
+          <div className="row"><div className="secondary">Your share</div><div className="value"><Money nanoton={cycle.creatorShareNanoton} /></div></div>
+          <div className="row"><div className="secondary">Community share</div><div className="value"><Money nanoton={cycle.communityShareNanoton} /></div></div>
 
           {cycle.rewardCycle ? (
             <>
@@ -407,7 +408,7 @@ function RevenueTab({ communityId }: { communityId: string }) {
               ) : (
                 <div className="row">
                   <div className="secondary">Distributed</div>
-                  <div className="value">{formatTon(cycle.rewardCycle.allocatedNanoton)} TON</div>
+                  <div className="value"><Money nanoton={cycle.rewardCycle.allocatedNanoton} /></div>
                 </div>
               )}
             </>
@@ -557,7 +558,7 @@ function SettingsTab({ communityId }: { communityId: string }) {
         <div className="row"><div className="secondary">CLE fee</div><div className="value">{data.platform.platformFeeBps / 100}%</div></div>
         <div className="row"><div className="secondary">Maximum creator share</div><div className="value">{maxShare / 100}%</div></div>
         <div className="row"><div className="secondary">Quizzes per day</div><div className="value">{data.platform.maxQuizzesPerDay}</div></div>
-        <div className="row"><div className="secondary">Minimum withdrawal</div><div className="value">{formatTon(data.platform.minWithdrawalNanoton)} TON</div></div>
+        <div className="row"><div className="secondary">Minimum withdrawal</div><div className="value"><Money nanoton={data.platform.minWithdrawalNanoton} /></div></div>
         <div className="row"><div className="secondary">New member hold</div><div className="value">{data.reward.newMemberHoldDays} days</div></div>
       </div>
     </>

@@ -16,6 +16,12 @@ CHANNEL REVENUE → CLE FEE (10%) → CREATOR SHARE (0–10% of the rest) → CO
 The platform is multi-tenant from the first row of the schema: a second creator
 can be onboarded without touching the data model or the reward engine.
 
+Members read their balance in **CLE points**: 1 000 CLEP is one TON, always, and
+the conversion is exact — a point is a million nanoton. Nothing is stored in
+points; the ledger is nanoton from end to end, and CLEP is how the Mini App
+writes it. Tapping the balance switches between the two, and the withdrawal
+always spells out the TON that will reach the wallet.
+
 ## Layout
 
 ```
