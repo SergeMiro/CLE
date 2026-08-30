@@ -16,6 +16,22 @@
 Optional but recommended: `AI_PROVIDER` + `AI_API_KEY` + `AI_MODEL` for real
 quizzes, and `TON_*` for real payouts.
 
+### A model that runs beside the app
+
+Any OpenAI-compatible endpoint works, including one on the host itself:
+
+```
+AI_PROVIDER=openai-compatible
+AI_BASE_URL=http://host.docker.internal:47821/v1
+AI_API_KEY=<the proxy's key>
+AI_MODEL=<the model or routing alias it serves>
+```
+
+`host.docker.internal` resolves because the API and worker declare
+`extra_hosts: host.docker.internal:host-gateway`. The endpoint has to listen on
+an address the containers can reach — a proxy bound to `127.0.0.1` is invisible
+to them — so keep the port closed at the firewall and keep its key set.
+
 Configuration is validated at start-up. A missing live credential stops the
 process rather than letting it run half-configured.
 

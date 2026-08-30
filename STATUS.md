@@ -31,9 +31,32 @@ with a balanced ledger after every step.
   machine is built for a real feed; today a creator (or a script) records it.
 - **The AI is only as good as its provider.** With no key the offline generator
   produces structurally valid but shallow quizzes. Set `AI_PROVIDER` and
-  `AI_API_KEY` for real ones.
-- **Wallets are linked by address in mock mode.** `ton_proof` verification is
-  implemented and tested server-side; the Mini App does not yet run TON Connect.
-- **No live Telegram run yet.** Everything above was exercised against the
-  simulated Bot API and in the browser. `docs/TESTING.md` is the step-by-step
-  procedure for a real bot and a real test channel.
+  `AI_API_KEY` for real ones. The deployment on this host answers through a local
+  OpenAI-compatible failover proxy, so a quiz costs nothing and a dead model is
+  retried on another one.
+- **A wallet is linked by a signed `ton_proof`, and the proof is tied to the
+  account.** Nonce, domain, freshness and signature are checked, and then the
+  wallet's state init is hashed: an account's address *is* that hash, and the
+  signing key has to appear inside it. A throw-away key naming somebody else's
+  address is refused.
+
+## Live run, 30 August 2026
+
+The platform was run end to end on the real deployment (`cle.smiro.dev`,
+`@create_learn_earn_bot`, `APP_MODE=live`) with one client — `@sdartagnan`,
+owner of `@kotiik_uchenyi` and `@techinsider360fr` — and CLE itself owned by
+`@sergemiro`. A channel post became a published quiz in the channel (both
+immediately and on a two-minute delay picked up by the worker), a real
+subscriber answered it, 100 TON split 10 / 4.5 / 85.5, the pools came out at
+29.925 / 34.2 / 12.825 / 8.55, a member and the creator both withdrew, and the
+ledger balanced to zero after every step. Two defects were found and fixed in
+that run: the Mini App was serving a build-time configuration (it claimed mock
+mode on testnet in production), and a partial policy update silently reset the
+rest of a community's settings.
+
+A third defect came out of the same run and is fixed here: a `ton_proof` was
+accepted without any link between the key that signed it and the address it
+named, so a freshly generated key could register somebody else's wallet as the
+payout address. The proof now has to carry the wallet's state init, and it is
+checked against both the address and the key — verified live against real v4R2
+and W5 wallets.

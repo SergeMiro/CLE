@@ -18,3 +18,4 @@ packages/db/generated/
 .env.production
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+.cle-livetest/
