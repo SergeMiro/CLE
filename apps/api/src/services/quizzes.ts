@@ -4,6 +4,7 @@ import type { Quiz } from '@cle/db';
 import { encodeStartPayload, miniAppLink } from '@cle/telegram';
 import type { AppContext } from '../context.js';
 import { badRequest, conflict, forbidden, notFound, unprocessable } from '../errors.js';
+import { type PublicAd, adForCommunity } from './ads.js';
 import { recordAudit } from './audit.js';
 import { ensureMembershipKnown } from './membership.js';
 import { effectiveQuizPolicy } from './policies.js';
@@ -242,6 +243,8 @@ export interface QuizForMember {
   membershipStatus: string;
   canAnswer: boolean;
   channelUsername: string | null;
+  /** The sponsored strip shown above the answers; absent when nothing is booked. */
+  ad?: PublicAd;
   questions: { id: string; prompt: string; basePoints: number; options: { id: string; text: string }[] }[];
 }
 
@@ -260,6 +263,8 @@ export async function getQuizForMember(ctx: AppContext, userId: string, quizId: 
   // Resolved here so the reader is told to join before answering, not after.
   const member = await ensureMembershipKnown(ctx, { communityId: quiz.communityId, userId, source: 'ONBOARDING_CHECK' });
   const attempt = await ctx.prisma.quizAttempt.findUnique({ where: { quizId_userId: { quizId, userId } } });
+  // A finished quiz is a results page, not an ad slot.
+  const ad = attempt?.status === 'SUBMITTED' ? undefined : await adForCommunity(ctx, quiz.communityId);
   return {
     id: quiz.id,
     title: quiz.title,
@@ -272,6 +277,7 @@ export async function getQuizForMember(ctx: AppContext, userId: string, quizId: 
     membershipStatus: member.status,
     canAnswer: member.status === 'ACTIVE' || member.status === 'REJOIN_COOLDOWN',
     channelUsername: quiz.community.channel.username,
+    ...(ad ? { ad } : {}),
     questions: quiz.questions.map((question) => ({
       id: question.id,
       prompt: question.prompt,

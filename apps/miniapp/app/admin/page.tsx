@@ -60,7 +60,158 @@ interface AiUsageRow {
   _sum: { inputTokens: number | null; outputTokens: number | null; estimatedCostMicroUsd: number | null };
 }
 
-type Tab = 'overview' | 'withdrawals' | 'organizations' | 'ai';
+interface AdminAd {
+  id: string;
+  scope: 'PLATFORM' | 'COMMUNITY';
+  sponsor: string;
+  headline: string;
+  body: string | null;
+  ctaLabel: string | null;
+  url: string;
+  status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ENDED';
+  weight: number;
+  impressions: number;
+  clicks: number;
+  community: { name: string; slug: string } | null;
+}
+
+type Tab = 'overview' | 'withdrawals' | 'organizations' | 'ads' | 'ai';
+
+const AD_PILL: Record<string, string> = { ACTIVE: 'ok', DRAFT: 'neutral', PAUSED: 'warn', ENDED: 'neutral' };
+
+/** Selling the strip inside a quiz: what runs, what it earned, and a way to stop it. */
+function AdsTab() {
+  const { token } = useSession();
+  const ads = useApi<AdminAd[]>('/api/v1/admin/ads');
+  const [sponsor, setSponsor] = useState('');
+  const [headline, setHeadline] = useState('');
+  const [body, setBody] = useState('');
+  const [ctaLabel, setCtaLabel] = useState('');
+  const [url, setUrl] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+
+  async function run(action: () => Promise<unknown>) {
+    setBusy(true);
+    setError(undefined);
+    try {
+      await action();
+      ads.reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      {error ? <ErrorNotice message={error} /> : null}
+
+      <div className="card">
+        <h2>Sell a slot</h2>
+        <p className="muted small mb">
+          One strip is shown inside every quiz, between the header and the answers. A community&apos;s own sponsor always wins
+          over a platform one.
+        </p>
+        <label className="field" htmlFor="ad-sponsor">
+          Sponsor
+        </label>
+        <input id="ad-sponsor" className="input" value={sponsor} onChange={(event) => setSponsor(event.target.value)} />
+        <label className="field" htmlFor="ad-headline">
+          Headline
+        </label>
+        <input id="ad-headline" className="input" value={headline} onChange={(event) => setHeadline(event.target.value)} />
+        <label className="field" htmlFor="ad-body">
+          Second line (optional)
+        </label>
+        <input id="ad-body" className="input" value={body} onChange={(event) => setBody(event.target.value)} />
+        <label className="field" htmlFor="ad-cta">
+          Button label (optional)
+        </label>
+        <input id="ad-cta" className="input" value={ctaLabel} onChange={(event) => setCtaLabel(event.target.value)} />
+        <label className="field" htmlFor="ad-url">
+          Link
+        </label>
+        <input id="ad-url" className="input" placeholder="https://" value={url} onChange={(event) => setUrl(event.target.value)} />
+        <button
+          type="button"
+          className="btn"
+          disabled={busy || !sponsor.trim() || !headline.trim() || !url.trim()}
+          onClick={() =>
+            run(async () => {
+              await api.post(
+                '/api/v1/admin/ads',
+                {
+                  scope: 'PLATFORM',
+                  sponsor: sponsor.trim(),
+                  headline: headline.trim(),
+                  ...(body.trim() ? { body: body.trim() } : {}),
+                  ...(ctaLabel.trim() ? { ctaLabel: ctaLabel.trim() } : {}),
+                  url: url.trim(),
+                  status: 'ACTIVE',
+                },
+                token,
+              );
+              setSponsor('');
+              setHeadline('');
+              setBody('');
+              setCtaLabel('');
+              setUrl('');
+            })
+          }
+        >
+          Create and run
+        </button>
+      </div>
+
+      {ads.loading && !ads.data ? <Loading rows={2} /> : null}
+      {ads.data?.length === 0 ? <div className="card center muted small">No campaigns yet.</div> : null}
+      {ads.data?.map((ad) => (
+        <div className="card tight" key={ad.id}>
+          <div className="spread mb">
+            <div style={{ minWidth: 0 }}>
+              <div className="primary truncate">{ad.headline}</div>
+              <div className="secondary muted truncate">
+                {ad.sponsor} · {ad.community ? ad.community.name : 'every community'}
+              </div>
+            </div>
+            <span className={`pill ${AD_PILL[ad.status] ?? 'neutral'}`}>{ad.status}</span>
+          </div>
+          <div className="facts">
+            <div>
+              <div className="value">{ad.impressions}</div>
+              <div className="label">Views</div>
+            </div>
+            <div>
+              <div className="value">{ad.clicks}</div>
+              <div className="label">Clicks</div>
+            </div>
+            <div>
+              <div className="value">{ad.impressions > 0 ? `${((ad.clicks / ad.impressions) * 100).toFixed(1)}%` : '—'}</div>
+              <div className="label">CTR</div>
+            </div>
+          </div>
+          <div className="stack mt">
+            <button
+              type="button"
+              className="btn secondary small"
+              style={{ width: '100%' }}
+              disabled={busy}
+              onClick={() =>
+                run(() =>
+                  api.post(`/api/v1/admin/ads/${ad.id}/status`, { status: ad.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' }, token),
+                )
+              }
+            >
+              {ad.status === 'ACTIVE' ? 'Pause' : 'Run'}
+            </button>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
 
 function OverviewTab() {
   const overview = useApi<PlatformOverview>('/api/v1/admin/overview');
@@ -234,7 +385,7 @@ function AdminContent() {
   return (
     <>
       <div className="tabs">
-        {(['overview', 'withdrawals', 'organizations', 'ai'] as Tab[]).map((candidate) => (
+        {(['overview', 'withdrawals', 'organizations', 'ads', 'ai'] as Tab[]).map((candidate) => (
           <button key={candidate} type="button" className={tab === candidate ? 'active' : ''} onClick={() => setTab(candidate)}>
             {candidate === 'ai' ? 'AI usage' : candidate.charAt(0).toUpperCase() + candidate.slice(1)}
           </button>
@@ -243,6 +394,7 @@ function AdminContent() {
       {tab === 'overview' ? <OverviewTab /> : null}
       {tab === 'withdrawals' ? <WithdrawalsTab /> : null}
       {tab === 'organizations' ? <OrganizationsTab /> : null}
+      {tab === 'ads' ? <AdsTab /> : null}
       {tab === 'ai' ? <AiTab /> : null}
     </>
   );

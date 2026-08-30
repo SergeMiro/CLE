@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../../components/shell';
+import { AdSlot, type QuizAd } from '../../../components/ad-slot';
 import { CommunitiesIcon, SparkIcon } from '../../../components/icons';
 import { api } from '../../../lib/api';
 import { useSession } from '../../../lib/session';
@@ -26,6 +27,8 @@ interface Quiz {
   membershipStatus: string;
   canAnswer: boolean;
   channelUsername: string | null;
+  /** A sponsored strip, when one is booked for this community. */
+  ad?: QuizAd;
   questions: QuizQuestion[];
 }
 
@@ -104,6 +107,9 @@ function QuizRunner({ quiz }: { quiz: Quiz }) {
           </div>
         </div>
       )}
+
+      {/* Between the quiz header and the answers, and never over a result. */}
+      {quiz.ad && !result ? <AdSlot ad={quiz.ad} /> : null}
 
       {error ? <ErrorNotice message={error} /> : null}
 

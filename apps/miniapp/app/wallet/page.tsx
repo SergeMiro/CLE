@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../components/shell';
-import { WalletIcon } from '../../components/icons';
+import { TonConnectSection, TonWalletProvider } from '../../components/ton-connect';
 import { api } from '../../lib/api';
+import { config } from '../../lib/config';
 import { formatDate, formatTon, tonToNanoton } from '../../lib/format';
 import { useSession } from '../../lib/session';
 import { useApi } from '../../lib/use-api';
@@ -116,35 +117,39 @@ function WalletContent() {
       {error ? <ErrorNotice message={error} /> : null}
       {message ? <div className="notice ok">{message}</div> : null}
 
-      <div className="card">
-        <h2>TON wallet</h2>
-        {primary ? (
-          <>
-            <div className="copyable mb">
-              <WalletIcon width={18} height={18} className="muted" />
-              <span className="mono">{primary.addressFriendly}</span>
-            </div>
-            <div className="small muted mb">
-              {primary.network.toLowerCase()} · linked {formatDate(primary.verifiedAt)}
-            </div>
-          </>
-        ) : (
-          <p className="muted small mb">Link the wallet that should receive your rewards.</p>
-        )}
-        <label className="field" htmlFor="ton-address">
-          TON address
-        </label>
-        <input
-          id="ton-address"
-          className="input"
-          placeholder="UQ… or 0:…"
-          value={address}
-          onChange={(event) => setAddress(event.target.value)}
-        />
-        <button type="button" className="btn secondary" disabled={busy || address.trim().length < 10} onClick={linkWallet}>
-          {primary ? 'Replace wallet' : 'Link wallet'}
-        </button>
-      </div>
+      <TonConnectSection
+        linkedAddress={primary?.addressFriendly}
+        onLinked={() => {
+          setMessage('Wallet linked.');
+          wallets.reload();
+        }}
+      />
+      {primary ? (
+        <p className="muted small center mb" style={{ marginTop: -6 }}>
+          {primary.network.toLowerCase()} · linked {formatDate(primary.verifiedAt)}
+        </p>
+      ) : null}
+
+      {/* Typing an address only works in mock mode — the live API demands a
+          signed proof — so the field is not offered where it cannot succeed. */}
+      {config().appMode === 'mock' ? (
+        <div className="card">
+          <h2>Paste an address (mock mode)</h2>
+          <label className="field" htmlFor="ton-address">
+            TON address
+          </label>
+          <input
+            id="ton-address"
+            className="input"
+            placeholder="UQ… or 0:…"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+          />
+          <button type="button" className="btn secondary" disabled={busy || address.trim().length < 10} onClick={linkWallet}>
+            {primary ? 'Replace wallet' : 'Link wallet'}
+          </button>
+        </div>
+      ) : null}
 
       <div className="card">
         <h2>Withdraw</h2>
@@ -191,7 +196,9 @@ export default function WalletPage() {
     <main className="app">
       <PageHeader title="Wallet" subtitle="One balance, one payout address" />
       <RequireSession>
-        <WalletContent />
+        <TonWalletProvider>
+          <WalletContent />
+        </TonWalletProvider>
       </RequireSession>
       <BottomNav />
     </main>

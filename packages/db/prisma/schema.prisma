@@ -466,6 +466,7 @@ model Community {
   allocations     RewardAllocation[]
   referrals       Referral[]
   aiUsage         AIUsage[]
+  advertisements  Advertisement[]
 
   @@index([organizationId, status])
 }
@@ -1094,4 +1095,48 @@ model AuditLog {
 
   @@index([entityType, entityId, createdAt])
   @@index([actorId, createdAt])
+}
+
+enum AdScope {
+  PLATFORM
+  COMMUNITY
+}
+
+enum AdStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+// A sponsored strip shown inside a quiz. Platform-scoped advertisements are sold
+// by CLE and can appear in any community; community-scoped ones belong to a
+// single channel and always win over a platform one, so a creator's own sponsor
+// is never displaced by ours.
+//
+// Impressions and clicks are counters rather than an event log: billing needs the
+// totals, and one row per view of a quiz would outgrow every other table here.
+model Advertisement {
+  id          String    @id @default(uuid()) @db.Uuid
+  scope       AdScope   @default(PLATFORM)
+  communityId String?   @db.Uuid
+  sponsor     String
+  headline    String
+  body        String?
+  ctaLabel    String?
+  url         String
+  status      AdStatus  @default(DRAFT)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  /// Relative share of impressions among the ads eligible for the same slot.
+  weight      Int       @default(1)
+  impressions Int       @default(0)
+  clicks      Int       @default(0)
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  community Community? @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([status, scope, communityId])
 }

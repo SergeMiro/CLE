@@ -75,6 +75,15 @@ export async function createApi({ ctx, logger = true }: CreateApiOptions): Promi
     if ((error as { code?: string }).code === 'P2002') {
       return reply.code(409).send({ error: 'conflict', message: 'that record already exists' });
     }
+    // Fastify's own errors (a malformed body, an unsupported content type)
+    // already carry the right 4xx; reporting them as 500 blames the server for
+    // what the caller sent, and hides the real cause from the client.
+    const statusCode = (error as { statusCode?: number }).statusCode;
+    if (typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500) {
+      request.log.warn({ err: error }, 'client error');
+      const message = error instanceof Error ? error.message : 'the request could not be read';
+      return reply.code(statusCode).send({ error: 'bad_request', message });
+    }
     request.log.error({ err: error }, 'unhandled error');
     return reply.code(500).send({ error: 'internal_error', message: 'something went wrong' });
   });

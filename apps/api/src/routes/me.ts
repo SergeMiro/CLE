@@ -4,6 +4,7 @@ import { encodeStartPayload, miniAppLink } from '@cle/telegram';
 import type { AppContext } from '../context.js';
 import { notFound } from '../errors.js';
 import { requireActor } from '../plugins/auth.js';
+import { countAdClick, countAdImpression } from '../services/ads.js';
 import { userHome } from '../services/analytics.js';
 import { communityBySlugOrId } from '../services/communities.js';
 import { syncMembership } from '../services/membership.js';
@@ -190,6 +191,23 @@ export function registerMeRoutes(app: FastifyInstance, ctx: AppContext): void {
         qualifiedAt: referral.qualifiedAt,
       })),
     };
+  });
+
+  /*
+   * Sponsored-slot counters. Both are behind a session so a bill can never be
+   * inflated by anyone who is not a signed-in member, and both answer 204 —
+   * the app must not wait on them before showing or opening the ad.
+   */
+  app.post('/api/v1/ads/:adId/impression', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (request, reply) => {
+    requireActor(request);
+    await countAdImpression(ctx, z.object({ adId: z.uuid() }).parse(request.params).adId);
+    return reply.code(204).send();
+  });
+
+  app.post('/api/v1/ads/:adId/click', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
+    requireActor(request);
+    await countAdClick(ctx, z.object({ adId: z.uuid() }).parse(request.params).adId);
+    return reply.code(204).send();
   });
 
   app.get('/api/v1/me/wallets', async (request) => listWallets(ctx, requireActor(request).id));

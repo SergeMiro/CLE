@@ -44,7 +44,8 @@ test.describe('member Mini App', () => {
 
   test('walks the wallet page and refuses a withdrawal with no wallet', async ({ page }) => {
     await page.goto(`/wallet?mockUser=${LEARNER}`);
-    await expect(page.getByText('TON wallet')).toBeVisible();
+    // "Connect TON wallet" contains the same words, so target the heading itself.
+    await expect(page.getByRole('heading', { name: 'TON wallet' })).toBeVisible();
     await page.getByLabel('Amount in TON').fill('1');
     await expect(page.getByRole('button', { name: 'Withdraw to TON' })).toBeDisabled();
   });

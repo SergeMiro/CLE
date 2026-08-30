@@ -133,4 +133,83 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
       take: 200,
     });
   });
+
+  /*
+   * Sponsored slots. CLE sells the platform-wide ones; a community-scoped ad
+   * belongs to one channel and outranks ours wherever it runs.
+   */
+  const adBody = z.object({
+    scope: z.enum(['PLATFORM', 'COMMUNITY']).default('PLATFORM'),
+    communityId: z.uuid().optional(),
+    sponsor: z.string().min(1).max(60),
+    headline: z.string().min(1).max(90),
+    body: z.string().max(160).optional(),
+    ctaLabel: z.string().max(24).optional(),
+    url: z.url().max(500),
+    status: z.enum(['DRAFT', 'ACTIVE', 'PAUSED', 'ENDED']).default('DRAFT'),
+    startsAt: z.iso.datetime().optional(),
+    endsAt: z.iso.datetime().optional(),
+    weight: z.number().int().min(1).max(100).default(1),
+  });
+
+  app.get('/api/v1/admin/ads', async (request) => {
+    requirePlatformAdmin(requireActor(request));
+    return ctx.prisma.advertisement.findMany({
+      include: { community: { select: { name: true, slug: true } } },
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      take: 200,
+    });
+  });
+
+  app.post('/api/v1/admin/ads', async (request) => {
+    const actor = requireActor(request);
+    requirePlatformAdmin(actor);
+    const body = adBody.parse(request.body);
+    if (body.scope === 'COMMUNITY' && !body.communityId) throw badRequest('a community-scoped ad needs a communityId');
+    if (body.startsAt && body.endsAt && new Date(body.startsAt) > new Date(body.endsAt)) {
+      throw badRequest('the campaign ends before it starts');
+    }
+    const ad = await ctx.prisma.advertisement.create({
+      data: {
+        scope: body.scope,
+        ...(body.scope === 'COMMUNITY' && body.communityId ? { communityId: body.communityId } : {}),
+        sponsor: body.sponsor,
+        headline: body.headline,
+        ...(body.body ? { body: body.body } : {}),
+        ...(body.ctaLabel ? { ctaLabel: body.ctaLabel } : {}),
+        url: body.url,
+        status: body.status,
+        ...(body.startsAt ? { startsAt: new Date(body.startsAt) } : {}),
+        ...(body.endsAt ? { endsAt: new Date(body.endsAt) } : {}),
+        weight: body.weight,
+        createdById: actor.id,
+      },
+    });
+    await recordAudit(ctx, {
+      actorType: 'USER',
+      actorId: actor.id,
+      action: 'ad.created',
+      entityType: 'Advertisement',
+      entityId: ad.id,
+      after: { sponsor: ad.sponsor, scope: ad.scope, status: ad.status },
+    });
+    return ad;
+  });
+
+  app.post('/api/v1/admin/ads/:adId/status', async (request) => {
+    const actor = requireActor(request);
+    requirePlatformAdmin(actor);
+    const { adId } = z.object({ adId: z.uuid() }).parse(request.params);
+    const { status } = z.object({ status: z.enum(['DRAFT', 'ACTIVE', 'PAUSED', 'ENDED']) }).parse(request.body);
+    const ad = await ctx.prisma.advertisement.update({ where: { id: adId }, data: { status } });
+    await recordAudit(ctx, {
+      actorType: 'USER',
+      actorId: actor.id,
+      action: 'ad.status',
+      entityType: 'Advertisement',
+      entityId: ad.id,
+      after: { status },
+    });
+    return ad;
+  });
 }
