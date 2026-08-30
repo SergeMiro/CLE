@@ -100,12 +100,14 @@ export interface RewardPolicyInputDto {
 export async function createRewardPolicyVersion(ctx: AppContext, input: RewardPolicyInputDto): Promise<RewardPolicy> {
   assertPoolShares(input);
   const platform = await currentPlatformPolicy(ctx);
-  const tiers = input.loyaltyTiers ?? [...DEFAULT_LOYALTY_TIERS];
+  const latest = await ctx.prisma.rewardPolicy.findFirst({ where: { communityId: input.communityId }, orderBy: { version: 'desc' } });
+  const tiers = input.loyaltyTiers ?? (latest ? loyaltyTiersOf(latest) : [...DEFAULT_LOYALTY_TIERS]);
   if (tiers.length === 0) throw badRequest('at least one loyalty tier is required');
   for (const type of ['GROWTH', 'LOYALTY', 'REFERRAL', 'LEARNING']) {
     if (!platform.allowedPoolTypes.includes(type)) throw badRequest(`reward pool ${type} is not enabled on this platform`);
   }
-  const latest = await ctx.prisma.rewardPolicy.findFirst({ where: { communityId: input.communityId }, orderBy: { version: 'desc' } });
+  // A new version is an edit of the community's settings, not a reset of them:
+  // whatever the caller left out keeps the value the community already had.
   return ctx.prisma.rewardPolicy.create({
     data: {
       communityId: input.communityId,
@@ -114,12 +116,12 @@ export async function createRewardPolicyVersion(ctx: AppContext, input: RewardPo
       loyaltyBps: input.loyaltyBps,
       referralBps: input.referralBps,
       learningBps: input.learningBps,
-      newMemberHoldDays: input.newMemberHoldDays ?? ctx.env.NEW_MEMBER_HOLD_DAYS,
-      rejoinCooldownDays: input.rejoinCooldownDays ?? ctx.env.REJOIN_COOLDOWN_DAYS,
-      referralQualificationDays: input.referralQualificationDays ?? ctx.env.REFERRAL_QUALIFICATION_DAYS,
+      newMemberHoldDays: input.newMemberHoldDays ?? latest?.newMemberHoldDays ?? ctx.env.NEW_MEMBER_HOLD_DAYS,
+      rejoinCooldownDays: input.rejoinCooldownDays ?? latest?.rejoinCooldownDays ?? ctx.env.REJOIN_COOLDOWN_DAYS,
+      referralQualificationDays: input.referralQualificationDays ?? latest?.referralQualificationDays ?? ctx.env.REFERRAL_QUALIFICATION_DAYS,
       loyaltyTiers: tiers as unknown as Prisma.InputJsonValue,
-      learningMultipliers: { streakStepBps: 500, streakCapBps: 15_000 } as unknown as Prisma.InputJsonValue,
-      minRewardNanoton: input.minRewardNanoton ?? 0n,
+      learningMultipliers: (latest?.learningMultipliers ?? { streakStepBps: 500, streakCapBps: 15_000 }) as unknown as Prisma.InputJsonValue,
+      minRewardNanoton: input.minRewardNanoton ?? latest?.minRewardNanoton ?? 0n,
       effectiveFrom: input.effectiveFrom ?? ctx.now(),
       createdByUserId: input.createdByUserId ?? null,
     },
@@ -146,28 +148,30 @@ export interface QuizPolicyInputDto {
 
 export async function createQuizPolicyVersion(ctx: AppContext, input: QuizPolicyInputDto): Promise<QuizGenerationPolicy> {
   const platform = await currentPlatformPolicy(ctx);
-  const dailyQuizLimit = input.dailyQuizLimit ?? platform.maxQuizzesPerDay;
+  const latest = await ctx.prisma.quizGenerationPolicy.findFirst({ where: { communityId: input.communityId }, orderBy: { version: 'desc' } });
+  // Changing one setting must not silently reset the rest — turning the daily
+  // limit down should never be what switches a community's quizzes off.
+  const dailyQuizLimit = input.dailyQuizLimit ?? latest?.dailyQuizLimit ?? platform.maxQuizzesPerDay;
   if (dailyQuizLimit > platform.maxQuizzesPerDay) {
     throw badRequest(`the platform allows at most ${platform.maxQuizzesPerDay} quizzes per day`);
   }
-  const latest = await ctx.prisma.quizGenerationPolicy.findFirst({ where: { communityId: input.communityId }, orderBy: { version: 'desc' } });
   return ctx.prisma.quizGenerationPolicy.create({
     data: {
       communityId: input.communityId,
       version: await nextVersion(latest?.version),
-      enabled: input.enabled ?? false,
-      mode: input.mode ?? 'MANUAL',
-      questionsPerQuiz: input.questionsPerQuiz ?? 3,
-      difficulty: input.difficulty ?? 'NORMAL',
-      language: input.language ?? 'en',
-      quizDelayMinutes: input.quizDelayMinutes ?? 0,
+      enabled: input.enabled ?? latest?.enabled ?? false,
+      mode: input.mode ?? latest?.mode ?? 'MANUAL',
+      questionsPerQuiz: input.questionsPerQuiz ?? latest?.questionsPerQuiz ?? 3,
+      difficulty: input.difficulty ?? latest?.difficulty ?? 'NORMAL',
+      language: input.language ?? latest?.language ?? 'en',
+      quizDelayMinutes: input.quizDelayMinutes ?? latest?.quizDelayMinutes ?? 0,
       dailyQuizLimit,
-      categoriesAllowed: input.categoriesAllowed ?? [],
-      minimumPostLength: input.minimumPostLength ?? 200,
-      publishButtonText: input.publishButtonText ?? 'START QUIZ',
-      rewardEnabled: input.rewardEnabled ?? true,
-      qualityThreshold: input.qualityThreshold ?? ctx.env.AI_QUALITY_THRESHOLD,
-      pointsPerQuestion: input.pointsPerQuestion ?? 10,
+      categoriesAllowed: input.categoriesAllowed ?? latest?.categoriesAllowed ?? [],
+      minimumPostLength: input.minimumPostLength ?? latest?.minimumPostLength ?? 200,
+      publishButtonText: input.publishButtonText ?? latest?.publishButtonText ?? 'START QUIZ',
+      rewardEnabled: input.rewardEnabled ?? latest?.rewardEnabled ?? true,
+      qualityThreshold: input.qualityThreshold ?? latest?.qualityThreshold ?? ctx.env.AI_QUALITY_THRESHOLD,
+      pointsPerQuestion: input.pointsPerQuestion ?? latest?.pointsPerQuestion ?? 10,
       effectiveFrom: input.effectiveFrom ?? ctx.now(),
     },
   });

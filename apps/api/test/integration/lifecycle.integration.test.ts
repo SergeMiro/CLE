@@ -451,4 +451,46 @@ describe('CLE end-to-end lifecycle', () => {
     expect(platform.body.platformTreasuryNanoton).toBe(parseTon('10').toString());
     expect(platform.body.withdrawalsConfirmedNanoton).toBe(parseTon('72.675').toString());
   });
+
+  it('edits one quiz setting without resetting the others', async () => {
+    const enable = await call(harness, {
+      method: 'POST',
+      url: `/api/v1/communities/${communityId}/policies/quiz`,
+      token: creator.token,
+      body: { enabled: true, mode: 'AUTO', questionsPerQuiz: 4, language: 'ru', minimumPostLength: 120, publishButtonText: 'ОТВЕТИТЬ' },
+    });
+    expect(enable.status).toBe(200);
+
+    // The creator only moves the delay; everything else must survive.
+    const delayed = await call(harness, {
+      method: 'POST',
+      url: `/api/v1/communities/${communityId}/policies/quiz`,
+      token: creator.token,
+      body: { quizDelayMinutes: 15 },
+    });
+    expect(delayed.status).toBe(200);
+    expect(delayed.body.quizDelayMinutes).toBe(15);
+    expect(delayed.body.enabled).toBe(true);
+    expect(delayed.body.mode).toBe('AUTO');
+    expect(delayed.body.questionsPerQuiz).toBe(4);
+    expect(delayed.body.language).toBe('ru');
+    expect(delayed.body.minimumPostLength).toBe(120);
+    expect(delayed.body.publishButtonText).toBe('ОТВЕТИТЬ');
+
+    const reward = await call(harness, {
+      method: 'POST',
+      url: `/api/v1/communities/${communityId}/policies/reward`,
+      token: creator.token,
+      body: { growthBps: 3500, loyaltyBps: 4000, referralBps: 1500, learningBps: 1000, newMemberHoldDays: 0 },
+    });
+    expect(reward.status).toBe(200);
+    const reshared = await call(harness, {
+      method: 'POST',
+      url: `/api/v1/communities/${communityId}/policies/reward`,
+      token: creator.token,
+      body: { growthBps: 3000, loyaltyBps: 4500, referralBps: 1500, learningBps: 1000 },
+    });
+    expect(reshared.status).toBe(200);
+    expect(reshared.body.newMemberHoldDays).toBe(0);
+  });
 });
