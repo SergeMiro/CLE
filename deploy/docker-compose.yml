@@ -57,6 +57,12 @@ services:
       target: runtime
     command: ["pnpm", "--filter", "@cle/api", "exec", "tsx", "src/main.ts"]
     env_file: [../.env.production]
+    environment:
+      # Uploaded ad creatives outlive the container, so they live on a volume
+      # rather than in the image's writable layer.
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - cle-uploads:/data/uploads
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -103,6 +109,7 @@ services:
 volumes:
   cle-postgres:
   cle-redis:
+  cle-uploads:
 
 networks:
   cle:

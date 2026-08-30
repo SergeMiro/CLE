@@ -8,6 +8,7 @@ import { recordAudit } from '../services/audit.js';
 import { checkLedgerHealth } from '../services/ledger.js';
 import { currentPlatformPolicy } from '../services/policies.js';
 import { requirePlatformAdmin } from '../services/rbac.js';
+import { storeImage } from '../services/uploads.js';
 import { processWithdrawal } from '../services/withdrawals.js';
 
 /** Platform-level administration. It belongs to CLE, never to a creator. */
@@ -163,6 +164,39 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
     startsAt: z.iso.datetime().optional(),
     endsAt: z.iso.datetime().optional(),
     weight: z.number().int().min(1).max(100).default(1),
+  });
+
+  /**
+   * Upload a creative to CLE instead of pointing at the advertiser's host. The
+   * response is the public URL to paste into a campaign.
+   */
+  app.post('/api/v1/admin/uploads', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request) => {
+    const actor = requireActor(request);
+    requirePlatformAdmin(actor);
+    const file = await request.file();
+    if (!file) throw badRequest('no file was sent');
+
+    let data: Buffer;
+    try {
+      data = await file.toBuffer();
+    } catch (error) {
+      // @fastify/multipart raises this once the stream passes the limit.
+      if ((error as { code?: string }).code === 'FST_REQ_FILE_TOO_LARGE') {
+        throw badRequest(`the image is larger than ${Math.round(ctx.env.UPLOAD_MAX_BYTES / 1024)} KB`);
+      }
+      throw error;
+    }
+
+    const stored = await storeImage(ctx, data);
+    await recordAudit(ctx, {
+      actorType: 'USER',
+      actorId: actor.id,
+      action: 'upload.created',
+      entityType: 'Upload',
+      entityId: stored.fileName,
+      after: { bytes: stored.bytes, contentType: stored.contentType },
+    });
+    return stored;
   });
 
   /** The picker behind ad targeting: every community CLE could run a campaign in. */

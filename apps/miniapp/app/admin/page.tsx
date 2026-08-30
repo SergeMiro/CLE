@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { BottomNav, ErrorNotice, Loading, PageHeader, RequireSession } from '../../components/shell';
 import { api } from '../../lib/api';
 import { formatDate, formatTon } from '../../lib/format';
@@ -103,6 +103,8 @@ function AdsTab() {
   const [url, setUrl] = useState('');
   const [targets, setTargets] = useState<string[]>([]);
   const [soldByCommunity, setSoldByCommunity] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState<string>();
   const [editTargets, setEditTargets] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -168,21 +170,61 @@ function AdsTab() {
           Button label (optional)
         </label>
         <input id="ad-cta" className="input" value={ctaLabel} onChange={(event) => setCtaLabel(event.target.value)} />
-        <label className="field" htmlFor="ad-image">
-          Image link (optional, https)
-        </label>
+        <div className="field">Creative (optional)</div>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          hidden
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            // Clear it straight away, so choosing the same file twice still fires.
+            event.target.value = '';
+            if (!file) return;
+            setUploading(true);
+            setError(undefined);
+            try {
+              const stored = await api.upload<{ url: string }>('/api/v1/admin/uploads', file, token);
+              setImageUrl(stored.url);
+            } catch (cause) {
+              setError(cause instanceof Error ? cause.message : String(cause));
+            } finally {
+              setUploading(false);
+            }
+          }}
+        />
+        <div className="grid-2 mb">
+          <button
+            type="button"
+            className="btn secondary small"
+            style={{ width: '100%' }}
+            disabled={uploading}
+            onClick={() => fileInput.current?.click()}
+          >
+            {uploading ? 'Uploading…' : 'Upload image'}
+          </button>
+          <button
+            type="button"
+            className="btn secondary small"
+            style={{ width: '100%' }}
+            disabled={!imageUrl}
+            onClick={() => setImageUrl('')}
+          >
+            Remove
+          </button>
+        </div>
         <input
           id="ad-image"
           className="input"
-          placeholder="https://…/logo.png"
+          placeholder="…or paste an https link"
           value={imageUrl}
           onChange={(event) => setImageUrl(event.target.value)}
         />
-        {imageUrl.startsWith('https://') ? (
+        {imageUrl.startsWith('https://') || imageUrl.startsWith('http://localhost') ? (
           <div className="copyable mb">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="ad-image" src={imageUrl} alt="" width={46} height={46} />
-            <span className="small muted">Preview — a square logo reads best.</span>
+            <span className="small muted">PNG, JPEG or WebP, up to 500 KB. A square logo reads best.</span>
           </div>
         ) : null}
         <label className="field" htmlFor="ad-url">

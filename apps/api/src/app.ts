@@ -1,4 +1,5 @@
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
@@ -16,6 +17,7 @@ import { registerAuthRoutes } from './routes/auth.js';
 import { registerCreatorRoutes } from './routes/creator.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerTelegramRoutes } from './routes/telegram.js';
+import { readImage } from './services/uploads.js';
 import { serialize } from './serialization.js';
 
 export interface CreateApiOptions {
@@ -37,6 +39,9 @@ export async function createApi({ ctx, logger = true }: CreateApiOptions): Promi
     allowedHeaders: ['content-type', 'authorization', 'x-cle-session'],
   });
   await app.register(rateLimit, { global: false, max: ctx.env.RATE_LIMIT_MAX, timeWindow: '1 minute' });
+  // One file per request, capped by the same limit the upload service enforces,
+  // so an oversized body is refused while it streams rather than after.
+  await app.register(multipart, { limits: { fileSize: ctx.env.UPLOAD_MAX_BYTES, files: 1, fields: 4 } });
 
   app.setSerializerCompiler(() => (data) => JSON.stringify(serialize(data)));
   app.addHook('preSerialization', async (_request, _reply, payload) => serialize(payload));
@@ -86,6 +91,24 @@ export async function createApi({ ctx, logger = true }: CreateApiOptions): Promi
     }
     request.log.error({ err: error }, 'unhandled error');
     return reply.code(500).send({ error: 'internal_error', message: 'something went wrong' });
+  });
+
+  /*
+   * Uploaded creatives. Public, because every member who opens a quiz loads
+   * one, and immutable, because the name is generated per file and never
+   * reused. The content type comes from the stored format and `nosniff` stops a
+   * browser from deciding otherwise — this is our own origin, so a file that
+   * managed to look like markup must never be treated as any.
+   */
+  app.get('/uploads/:fileName', async (request, reply) => {
+    const { fileName } = request.params as { fileName: string };
+    const image = await readImage(ctx, fileName);
+    return reply
+      .header('content-type', image.contentType)
+      .header('x-content-type-options', 'nosniff')
+      .header('content-security-policy', "default-src 'none'")
+      .header('cache-control', 'public, max-age=31536000, immutable')
+      .send(image.data);
   });
 
   app.get('/health', async () => ({

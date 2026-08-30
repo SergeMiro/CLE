@@ -57,7 +57,29 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   return payload as T;
 }
 
+/**
+ * Multipart, so the browser sets its own content-type with the boundary — the
+ * JSON path above would corrupt the body.
+ */
+export async function apiUpload<T>(path: string, file: File, token?: string): Promise<T> {
+  const authorization = token ?? storedToken();
+  const form = new FormData();
+  form.append('file', file);
+  const response = await fetch(`${apiBaseUrl()}${path}`, {
+    method: 'POST',
+    headers: authorization ? { authorization: `Bearer ${authorization}` } : {},
+    body: form,
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : undefined;
+  if (!response.ok) {
+    throw new ApiError(response.status, payload?.error ?? 'error', payload?.message ?? `upload failed with ${response.status}`);
+  }
+  return payload as T;
+}
+
 export const api = {
   get: <T>(path: string, token?: string) => apiRequest<T>(path, { token }),
   post: <T>(path: string, body?: unknown, token?: string) => apiRequest<T>(path, { method: 'POST', body: body ?? {}, token }),
+  upload: apiUpload,
 };

@@ -54,6 +54,11 @@ export const environmentSchema = z.object({
   NEW_MEMBER_HOLD_DAYS: z.coerce.number().int().nonnegative().default(7),
   REJOIN_COOLDOWN_DAYS: z.coerce.number().int().nonnegative().default(7),
 
+  /** Where uploaded ad creatives are written. Backed by a Docker volume in production. */
+  UPLOAD_DIR: z.string().default('.cle/uploads'),
+  /** Largest creative accepted, in bytes. A 46px strip needs far less than this. */
+  UPLOAD_MAX_BYTES: z.coerce.number().int().positive().max(10_000_000).default(512_000),
+
   AI_PROVIDER: z.enum(['mock', 'openrouter', 'gemini', 'anthropic', 'openai-compatible']).default('mock'),
   AI_MODEL: z.string().optional(),
   AI_API_KEY: z.string().optional(),
