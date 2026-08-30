@@ -49,6 +49,12 @@
 
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --gap: 12px;
+
+  /* Inter runs the text, Manrope the headings and every figure. The system
+     stack behind them is what a device shows before the webfont arrives. */
+  --stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-ui: var(--font-text), var(--stack);
+  --font-head: var(--font-display), var(--font-text), var(--stack);
 }
 
 /* Telegram reports its own scheme; `data-theme` is set from JS so the app is
@@ -92,10 +98,10 @@ html, body {
   padding: 0;
   background: var(--page);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Inter, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
   font-size: 15px;
   line-height: 1.45;
-  letter-spacing: -0.006em;
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overscroll-behavior-y: none;
@@ -135,10 +141,11 @@ button, input, select, textarea { font-family: inherit; }
   margin: 4px 2px 18px;
 }
 .header h1 {
+  font-family: var(--font-head);
   font-size: 25px;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
-  letter-spacing: -0.032em;
+  letter-spacing: -0.03em;
   line-height: 1.15;
 }
 .header .subtitle {
@@ -150,6 +157,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .avatar {
+  font-family: var(--font-head);
   flex: none;
   width: 38px;
   height: 38px;
@@ -179,6 +187,7 @@ button, input, select, textarea { font-family: inherit; }
 .card.tight { padding: 13px 15px; }
 .card.flush { padding: 6px 16px; }
 .card h2 {
+  font-family: var(--font-head);
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -186,7 +195,7 @@ button, input, select, textarea { font-family: inherit; }
   color: var(--muted);
   margin: 0 0 12px;
 }
-.card h3 { font-size: 15.5px; font-weight: 640; margin: 0 0 12px; letter-spacing: -0.015em; line-height: 1.35; }
+.card h3 { font-family: var(--font-head); font-size: 16px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.02em; line-height: 1.35; }
 
 /* A card that is also a link: give it the affordance of one. */
 a.card { display: block; color: inherit; transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease); }
@@ -229,20 +238,22 @@ a.card.spread { display: flex; }
   z-index: -1;
 }
 .hero .eyebrow {
+  font-family: var(--font-head);
   font-size: 11.5px;
-  font-weight: 650;
+  font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   opacity: 0.78;
 }
 .hero .amount {
+  font-family: var(--font-head);
   display: flex;
   align-items: baseline;
   gap: 8px;
   margin-top: 8px;
   font-size: clamp(34px, 10.5vw, 42px);
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-weight: 800;
+  letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
   line-height: 1.05;
 }
@@ -261,10 +272,11 @@ a.card.spread { display: flex; }
   background: #fff;
   transition: width 0.5s var(--ease);
 }
-.level-caption { font-size: 12.5px; opacity: 0.85; margin-top: 8px; font-weight: 550; }
+.level-caption { font-family: var(--font-head); font-size: 12.5px; opacity: 0.85; margin-top: 8px; font-weight: 550; }
 
 .hero .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .hero .chip {
+  font-variant-numeric: tabular-nums;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -289,8 +301,9 @@ a.card.spread { display: flex; }
   box-shadow: var(--shadow-1);
 }
 .stat .value {
+  font-family: var(--font-head);
   font-size: 21px;
-  font-weight: 680;
+  font-weight: 700;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
@@ -298,7 +311,7 @@ a.card.spread { display: flex; }
 .stat .label {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 550;
+  font-weight: 500;
   margin-top: 4px;
   letter-spacing: 0.01em;
 }
@@ -313,7 +326,7 @@ a.card.spread { display: flex; }
   border-top: 1px solid var(--line-soft);
   text-align: center;
 }
-.facts .value { font-size: 17px; font-weight: 660; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+.facts .value { font-family: var(--font-head); font-size: 17px; font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
 .facts .value.date { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
 .facts .label { color: var(--muted); font-size: 11px; font-weight: 550; margin-top: 2px; }
 
@@ -333,10 +346,11 @@ a.row { transition: opacity 0.15s var(--ease); }
 a.row:active { opacity: 0.55; }
 .row .primary { font-weight: 590; letter-spacing: -0.012em; }
 .row .secondary { color: var(--muted); font-size: 12.5px; margin-top: 1px; }
-.row .value { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 560; }
+.row .value { font-family: var(--font-head); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 650; }
 
 /* A round monogram standing in for a community or channel avatar. */
 .mono-badge {
+  font-family: var(--font-head);
   flex: none;
   width: 40px;
   height: 40px;
@@ -376,9 +390,10 @@ a.row:active { opacity: 0.55; }
   border-radius: var(--r-sm);
   background: var(--brand-grad);
   color: var(--on-brand);
+  font-family: var(--font-head);
   font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.012em;
   cursor: pointer;
   box-shadow: var(--shadow-brand);
   transition: transform 0.14s var(--ease), box-shadow 0.14s var(--ease), opacity 0.14s var(--ease);
@@ -437,7 +452,7 @@ a.row:active { opacity: 0.55; }
   border: 1px solid var(--line-soft);
   text-align: center;
 }
-.split-preview .value { font-size: 18px; font-weight: 660; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+.split-preview .value { font-family: var(--font-head); font-size: 18px; font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
 .split-preview .label { color: var(--muted); font-size: 11px; font-weight: 550; margin-top: 2px; }
 
 /* ── Sliders ────────────────────────────────────────────────────────── */
@@ -452,7 +467,7 @@ a.row:active { opacity: 0.55; }
   color: var(--muted);
   margin-bottom: 9px;
 }
-.slider-head b { color: var(--text); font-weight: 660; font-variant-numeric: tabular-nums; letter-spacing: -0.015em; }
+.slider-head b { font-family: var(--font-head); color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.015em; }
 
 .range {
   -webkit-appearance: none;
@@ -498,6 +513,7 @@ a.row:active { opacity: 0.55; }
 /* ── Pills ──────────────────────────────────────────────────────────── */
 
 .pill {
+  font-family: var(--font-head);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -619,6 +635,7 @@ a.row:active { opacity: 0.55; }
 .quiz-option:last-of-type { margin-bottom: 0; }
 .quiz-option:active:not(:disabled) { transform: scale(0.985); }
 .quiz-option .key {
+  font-family: var(--font-head);
   flex: none;
   width: 24px;
   height: 24px;
@@ -670,8 +687,9 @@ a.row:active { opacity: 0.55; }
   animation: ring-in 0.7s var(--ease) both;
 }
 .ring b {
+  font-family: var(--font-head);
   font-size: 29px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -719,6 +737,7 @@ a.row:active { opacity: 0.55; }
 .trail { display: flex; align-items: center; gap: 7px; flex: none; }
 .stack { display: flex; flex-direction: column; gap: 8px; }
 .section-title {
+  font-family: var(--font-head);
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
