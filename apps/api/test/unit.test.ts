@@ -142,6 +142,8 @@ describe('quiz announcement', () => {
     expect(announcementFor('ru').headline).toBe('ПРОВЕРЬ СЕБЯ');
     expect(announcementFor('en').headline).toBe('TEST YOUR KNOWLEDGE');
     expect(announcementFor('uk').headline).toBe('ПЕРЕВІР СЕБЕ');
+    expect(announcementFor('fr').headline).toBe('TESTEZ VOS CONNAISSANCES');
+    expect(announcementFor('es').headline).toBe('PON A PRUEBA TUS CONOCIMIENTOS');
   });
 
   it('falls back to English for a language it does not know', () => {
@@ -151,6 +153,8 @@ describe('quiz announcement', () => {
 
   it('accepts a regional tag', () => {
     expect(announcementFor('RU-ru').headline).toBe('ПРОВЕРЬ СЕБЯ');
+    expect(announcementFor('fr-CA').headline).toBe('TESTEZ VOS CONNAISSANCES');
+    expect(announcementFor('es-419').headline).toBe('PON A PRUEBA TUS CONOCIMIENTOS');
   });
 
   it('counts questions the way each language does', () => {
@@ -159,6 +163,16 @@ describe('quiz announcement', () => {
     expect(announcementFor('ru').questions(7)).toContain('7 вопросов');
     expect(announcementFor('en').questions(1)).toContain('1 question ');
     expect(announcementFor('en').questions(3)).toContain('3 questions');
+    expect(announcementFor('fr').questions(1)).toContain('1 question ');
+    expect(announcementFor('fr').questions(3)).toContain('3 questions');
+    expect(announcementFor('es').questions(1)).toContain('1 pregunta ');
+    expect(announcementFor('es').questions(3)).toContain('3 preguntas');
+  });
+
+  it('promises XP in every language, and the same amount', () => {
+    for (const language of ['en', 'ru', 'uk', 'fr', 'es']) {
+      expect(announcementFor(language).reward(30)).toContain('30 XP');
+    }
   });
 });
 

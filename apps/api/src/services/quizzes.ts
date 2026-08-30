@@ -147,6 +147,16 @@ const ANNOUNCEMENTS: Record<string, Announcement> = {
     questions: (count) => `${count} ${count === 1 ? 'вопрос' : count < 5 ? 'вопроса' : 'вопросов'} по посту выше.`,
     reward: (points) => `Можно заработать до ${points} XP.`,
   },
+  fr: {
+    headline: 'TESTEZ VOS CONNAISSANCES',
+    questions: (count) => `${count} question${count === 1 ? '' : 's'} sur le post ci-dessus.`,
+    reward: (points) => `Jusqu'à ${points} XP à gagner.`,
+  },
+  es: {
+    headline: 'PON A PRUEBA TUS CONOCIMIENTOS',
+    questions: (count) => `${count} pregunta${count === 1 ? '' : 's'} sobre la publicación de arriba.`,
+    reward: (points) => `Gana hasta ${points} XP.`,
+  },
   uk: {
     headline: 'ПЕРЕВІР СЕБЕ',
     questions: (count) => `${count} ${count === 1 ? 'питання' : 'питань'} за постом вище.`,
