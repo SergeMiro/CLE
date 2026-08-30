@@ -51,7 +51,7 @@ function HomeContent() {
       <div className="stat-row mb">
         <div className="stat">
           <div className="value">{data.learningPoints}</div>
-          <div className="label">Learning points</div>
+          <div className="label">XP</div>
         </div>
         <div className="stat">
           <div className="value">{data.quizzesCompleted}</div>
@@ -94,7 +94,7 @@ function HomeContent() {
                 <div>
                   <div className="primary truncate">{community.communityName}</div>
                   <div className="secondary">
-                    {community.learningPoints} points · {community.status.toLowerCase().replace('_', ' ')}
+                    {community.learningPoints} XP · {community.status.toLowerCase().replace('_', ' ')}
                   </div>
                 </div>
               </div>

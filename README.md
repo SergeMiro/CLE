@@ -16,6 +16,11 @@ CHANNEL REVENUE → CLE FEE (10%) → CREATOR SHARE (0–10% of the rest) → CO
 The platform is multi-tenant from the first row of the schema: a second creator
 can be onboarded without touching the data model or the reward engine.
 
+Two counters, and they are not the same thing. **XP** is what answering a quiz
+earns: it decides how much of the learning pool a member is owed, and it buys
+nothing. **CLE points (CLEP)** are money — the member's TON balance, written in
+a unit that suits its size.
+
 Members read their balance in **CLE points**: 1 000 CLEP is one TON, always, and
 the conversion is exact — a point is a million nanoton. Nothing is stored in
 points; the ledger is nanoton from end to end, and CLEP is how the Mini App

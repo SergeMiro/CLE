@@ -73,7 +73,7 @@ function LearnContent() {
             {quiz.completed ? (
               <span className="pill ok">+{quiz.earnedPoints}</span>
             ) : (
-              <span className="pill brand">{quiz.totalPoints} pts</span>
+              <span className="pill brand">{quiz.totalPoints} XP</span>
             )}
             <ChevronIcon className="chevron" />
           </div>

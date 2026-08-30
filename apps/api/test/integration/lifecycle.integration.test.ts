@@ -182,6 +182,8 @@ describe('CLE end-to-end lifecycle', () => {
     const posted = harness.telegram.state.sent.at(-1);
     expect(posted?.text).toContain('TEST YOUR KNOWLEDGE');
     expect(posted?.text).toContain('3 questions about the post above');
+    // What the card promises is XP, not a share of the money.
+    expect(posted?.text).toMatch(/Earn up to \d+ XP\./);
     expect(posted?.replyMarkup?.inline_keyboard[0]?.[0]?.url).toContain('startapp=q_');
   });
 
@@ -250,7 +252,7 @@ describe('CLE end-to-end lifecycle', () => {
     expect(quiz.body.questions).toHaveLength(3);
   });
 
-  it('scores a quiz on the server and awards learning points', async () => {
+  it('scores a quiz on the server and awards XP', async () => {
     const quiz = await call(harness, { method: 'GET', url: `/api/v1/quizzes/${quizId}`, token: member.token });
     // The mock generator always puts the correct option first.
     const answers = quiz.body.questions.map((question: any) => ({ questionId: question.id, optionId: question.options[0].id }));

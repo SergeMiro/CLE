@@ -140,17 +140,17 @@ const ANNOUNCEMENTS: Record<string, Announcement> = {
   en: {
     headline: 'TEST YOUR KNOWLEDGE',
     questions: (count) => `${count} question${count === 1 ? '' : 's'} about the post above.`,
-    reward: (points) => `Earn up to ${points} CLE learning points.`,
+    reward: (points) => `Earn up to ${points} XP.`,
   },
   ru: {
     headline: 'ПРОВЕРЬ СЕБЯ',
     questions: (count) => `${count} ${count === 1 ? 'вопрос' : count < 5 ? 'вопроса' : 'вопросов'} по посту выше.`,
-    reward: (points) => `Можно заработать до ${points} очков обучения CLE.`,
+    reward: (points) => `Можно заработать до ${points} XP.`,
   },
   uk: {
     headline: 'ПЕРЕВІР СЕБЕ',
     questions: (count) => `${count} ${count === 1 ? 'питання' : 'питань'} за постом вище.`,
-    reward: (points) => `Можна заробити до ${points} балів навчання CLE.`,
+    reward: (points) => `Можна заробити до ${points} XP.`,
   },
 };
 
@@ -320,7 +320,7 @@ export async function submitQuizAttempt(ctx: AppContext, userId: string, quizId:
     source: 'ONBOARDING_CHECK',
   });
   if (member.status !== 'ACTIVE' && member.status !== 'REJOIN_COOLDOWN') {
-    throw forbidden('join the channel to earn learning points');
+    throw forbidden('join the channel to earn XP');
   }
 
   const existing = await ctx.prisma.quizAttempt.findUnique({ where: { quizId_userId: { quizId, userId } } });

@@ -86,18 +86,18 @@ function QuizRunner({ quiz }: { quiz: Quiz }) {
             </div>
           </div>
           <div className="pill brand" style={{ marginBottom: 6 }}>
-            +{result.finalPoints} learning points
+            +{result.finalPoints} XP
             {result.multiplierBps > 10_000 ? ` · streak ×${(result.multiplierBps / 10_000).toFixed(2)}` : ''}
           </div>
           <p className="muted small" style={{ margin: 0 }}>
-            {result.totalCommunityPoints} points in {quiz.communityName}
+            {result.totalCommunityPoints} XP in {quiz.communityName}
           </p>
         </div>
       ) : (
         <div className="card tight">
           <div className="spread" style={{ marginBottom: 9 }}>
             <div className="primary truncate">{quiz.title}</div>
-            <span className="pill brand">{quiz.totalPoints} pts</span>
+            <span className="pill brand">{quiz.totalPoints} XP</span>
           </div>
           <div className="progress">
             <span style={{ width: `${(answered / quiz.questions.length) * 100}%` }} />
@@ -186,7 +186,7 @@ function QuizContent() {
           <CommunitiesIcon width={26} height={26} />
         </div>
         <h3 style={{ marginBottom: 6 }}>Join {data.communityName} first</h3>
-        <p>Learning points are paid to members of the channel. Join it, then come back to this quiz.</p>
+        <p>XP is earned by members of the channel. Join it, then come back to this quiz.</p>
         {data.channelUsername ? (
           <button type="button" className="btn mt" onClick={() => openLink(`https://t.me/${data.channelUsername}`)}>
             Open the channel
@@ -203,7 +203,7 @@ function QuizContent() {
           <SparkIcon width={26} height={26} />
         </div>
         <h3 style={{ marginBottom: 6 }}>Already completed</h3>
-        <p>You earned {data.earnedPoints} learning points from this quiz.</p>
+        <p>You earned {data.earnedPoints} XP from this quiz.</p>
       </div>
     );
   }

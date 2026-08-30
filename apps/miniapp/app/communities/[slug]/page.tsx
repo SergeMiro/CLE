@@ -90,7 +90,7 @@ function CommunityContent() {
           </div>
           <div>
             <div className="value">{data.membership?.learningPoints ?? 0}</div>
-            <div className="label">Your points</div>
+            <div className="label">Your XP</div>
           </div>
           <div>
             <div className="value date">{(data.membership?.status ?? 'not joined').toLowerCase().replace('_', ' ')}</div>

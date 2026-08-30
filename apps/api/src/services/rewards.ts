@@ -10,7 +10,7 @@ import { effectiveRewardPolicy, loyaltyTiersOf } from './policies.js';
 import { qualifiedReferralCounts, qualifyReferrals } from './referrals.js';
 import { type Actor, requireCommunityAccess } from './rbac.js';
 
-/** Learning points a member earned inside the cycle window, from submitted attempts only. */
+/** XP a member earned inside the cycle window (learningPoints in the schema), from submitted attempts only. */
 async function learningPointsInPeriod(ctx: AppContext, communityId: string, from: Date, to: Date): Promise<Map<string, number>> {
   const grouped = await ctx.prisma.quizAttempt.groupBy({
     by: ['userId'],

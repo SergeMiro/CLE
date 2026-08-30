@@ -286,7 +286,7 @@ function CreatorContent() {
             </div>
             <div className="stat">
               <div className="value">{overview.data.learningPoints}</div>
-              <div className="label">Points earned</div>
+              <div className="label">XP earned</div>
             </div>
           </div>
         </>

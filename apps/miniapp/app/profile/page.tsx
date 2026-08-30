@@ -50,13 +50,13 @@ function ProfileContent() {
         <div className="eyebrow">Learning level</div>
         <div className="amount">
           {level.key}
-          <span className="unit">{data.learningPoints} pts</span>
+          <span className="unit">{data.learningPoints} XP</span>
         </div>
         <div className="level-track">
           <span style={{ width: `${progress}%` }} />
         </div>
         <div className="level-caption">
-          {next ? `${next.minPoints - data.learningPoints} points to ${next.key}` : 'Top level reached'}
+          {next ? `${next.minPoints - data.learningPoints} XP to ${next.key}` : 'Top level reached'}
         </div>
       </section>
 

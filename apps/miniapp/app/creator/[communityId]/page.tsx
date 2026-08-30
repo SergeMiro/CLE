@@ -139,7 +139,7 @@ function OverviewTab({ communityId }: { communityId: string }) {
         <div className="row"><div className="secondary">Quizzes published</div><div className="value">{data.quizzesPublished}</div></div>
         <div className="row"><div className="secondary">Quiz attempts</div><div className="value">{data.quizAttempts}</div></div>
         <div className="row"><div className="secondary">Participation</div><div className="value">{data.quizCompletionPercent}%</div></div>
-        <div className="row"><div className="secondary">Learning points</div><div className="value">{data.learningPoints}</div></div>
+        <div className="row"><div className="secondary">XP earned</div><div className="value">{data.learningPoints}</div></div>
       </div>
       <div className="card">
         <h2>Money</h2>

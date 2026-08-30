@@ -67,7 +67,7 @@ function CommunitiesContent() {
           <div className="facts">
             <div>
               <div className="value">{membership.learningPoints}</div>
-              <div className="label">Points</div>
+              <div className="label">XP</div>
             </div>
             <div>
               <div className="value">{membership.quizzesCompleted}</div>

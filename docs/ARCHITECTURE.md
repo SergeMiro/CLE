@@ -16,7 +16,7 @@ PLATFORM
 A `User` is global. One person is a learner in several communities, a creator in
 their own organization and possibly a platform administrator — with one identity,
 one wallet and one balance. `CommunityMember` is the join between a user and a
-community, and it is where per-community state (status, points, loyalty level)
+community, and it is where per-community state (status, XP, loyalty level)
 belongs.
 
 ## The money

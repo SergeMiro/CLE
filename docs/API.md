@@ -27,8 +27,8 @@ That shortcut does not exist in live mode.
 | method | path | purpose |
 | --- | --- | --- |
 | GET | `/me` | profile, referral code, whether they are a creator or admin |
-| GET | `/me/home` | global balance, per-community breakdown, points, open quizzes |
-| GET | `/me/communities` | every membership with status and points |
+| GET | `/me/home` | global balance, per-community breakdown, XP, open quizzes |
+| GET | `/me/communities` | every membership with status and XP |
 | GET | `/communities/:slugOrId` | one community and the caller's membership |
 | POST | `/communities/:communityId/membership/sync` | re-check membership with Telegram |
 | GET | `/me/quizzes` | the learning feed across every community (`?communityId=`) |

@@ -6,10 +6,10 @@ const CREATOR = 111_000_001;
 const ADMIN = 111_000_900;
 
 test.describe('member Mini App', () => {
-  test('shows the balance, points and communities of a seeded learner', async ({ page }) => {
+  test('shows the balance, XP and communities of a seeded learner', async ({ page }) => {
     await page.goto(`/?mockUser=${LEARNER}`);
     await expect(page.getByText('Available to withdraw')).toBeVisible();
-    await expect(page.getByText('Learning points')).toBeVisible();
+    await expect(page.getByText('XP', { exact: true })).toBeVisible();
     await expect(page.getByText('Science Daily CLE').first()).toBeVisible();
     // The seeded learner really was paid out of the community share.
     await expect(page.locator('.hero .amount')).not.toHaveText(/^0\s*TON$/);
@@ -34,7 +34,7 @@ test.describe('member Mini App', () => {
     }
 
     await page.getByRole('button', { name: 'Submit answers' }).click();
-    await expect(page.getByText(/learning points/)).toBeVisible();
+    await expect(page.getByText(/XP/)).toBeVisible();
     await expect(page.locator('.quiz-option.correct').first()).toBeVisible();
 
     // A second attempt is refused.
